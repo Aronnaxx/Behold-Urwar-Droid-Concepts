@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block title %}Reference Motions - Open Duck Mini{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-output {
+        font-family: monospace;
+        white-space: pre-wrap;
+        background-color: var(--bs-dark);
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-top: 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+        color: var(--bs-light);
+    }
+    .log-entry {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--bs-gray-700);
+    }
+    .log-entry:last-child {
+        border-bottom: none;
+    }
+    .log-timestamp {
+        color: var(--bs-gray-400);
+        font-size: 0.875rem;
+    }
+    .log-message {
+        color: var(--bs-light);
+    }
+    .log-error {
+        color: #ff6b6b;
+    }
+    .log-success {
+        color: #51cf66;
+    }
+    .motion-preview {
+        width: 100%;
+        height: 300px;
+        background-color: var(--bs-dark);
+        border: 1px solid var(--bs-gray-700);
+        border-radius: 0.25rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .motion-preview i {
+        font-size: 3rem;
+        color: var(--bs-gray-600);
+    }
+    .motion-preview canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    .card {
+        background-color: var(--bs-dark);
+        border-color: var(--bs-gray-700);
+    }
+    .card-title {
+        color: var(--bs-light);
+    }
+    .card-text {
+        color: var(--bs-gray-300);
+    }
+    .alert-info {
+        background-color: var(--bs-info-bg-subtle);
+        border-color: var(--bs-info-border-subtle);
+        color: var(--bs-info);
+    }
+    .list-group-item {
+        background-color: var(--bs-dark);
+        border-color: var(--bs-gray-700);
+        color: var(--bs-light);
+    }
+    .list-group-item:hover {
+        background-color: var(--bs-gray-800);
+    }
+    .list-group-item-action:active {
+        background-color: var(--bs-gray-700);
+    }
+    .breadcrumb {
+        background-color: var(--bs-dark);
+    }
+    .breadcrumb-item a {
+        color: var(--bs-primary);
+    }
+    .breadcrumb-item.active {
+        color: var(--bs-gray-400);
+    }
+    .accordion-item {
+        background-color: var(--bs-dark);
+        border-color: var(--bs-gray-700);
+    }
+    .accordion-button {
+        background-color: var(--bs-dark);
+        color: var(--bs-light);
+    }
+    .accordion-button:not(.collapsed) {
+        background-color: var(--bs-gray-800);
+        color: var(--bs-light);
+    }
+    .accordion-body {
+        background-color: var(--bs-dark);
+        color: var(--bs-gray-300);
+    }
+    .form-label {
+        color: var(--bs-light);
+    }
+    .form-control, .form-select {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-gray-700);
+        color: var(--bs-light);
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-primary);
+        color: var(--bs-light);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('open_duck_mini.open_duck_mini_page') }}">Open Duck Mini</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Reference Motions</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Overview Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">Reference Motion Generation</h2>
+                <p class="card-text">
+                    Generate reference motions for the Open Duck Mini using imitation learning. 
+                    These motions are used to train the robot's walking behavior.
+                </p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Reference motions are generated using the MuJoCo physics engine and can be used for both simulation and real-world deployment.
+                </div>
+            </div>
+        </div>
+
+        <!-- Motion Generation Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">Generate Motion</h2>
+                <form id="motion-form">
+                    <div class="mb-3">
+                        <label for="motion-type" class="form-label">Motion Type</label>
+                        <select class="form-select" id="motion-type" name="motion_type">
+                            <option value="walk">Walking</option>
+                            <option value="trot">Trotting</option>
+                            <option value="gallop">Galloping</option>
+                            <option value="jump">Jumping</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="duration" class="form-label">Duration (seconds)</label>
+                        <input type="number" class="form-control" id="duration" name="duration" value="5" min="1" max="30">
+                    </div>
+                    <div class="mb-3">
+                        <label for="speed" class="form-label">Speed (m/s)</label>
+                        <input type="number" class="form-control" id="speed" name="speed" value="0.5" min="0.1" max="2.0" step="0.1">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-cog"></i> Generate Motion
+                    </button>
+                </form>
+                <div class="log-output" id="generation-log">
+                    <div class="log-entry">
+                        <span class="log-timestamp">[System]</span>
+                        <span class="log-message">Ready to generate motion...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Motion Preview Section -->
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Motion Preview</h2>
+                <div class="motion-preview" id="motion-preview">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="mt-3">
+                    <button id="play-preview" class="btn btn-success" disabled>
+                        <i class="fas fa-play"></i> Play Preview
+                    </button>
+                    <button id="download-motion" class="btn btn-primary" disabled>
+                        <i class="fas fa-download"></i> Download Motion File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Quick Links -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">Quick Links</h2>
+                <div class="list-group">
+                    <a href="{{ url_for('open_duck_mini.open_duck_mini_page') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-home"></i> Open Duck Mini Home
+                    </a>
+                    <a href="{{ url_for('playground.view_playground', duck_type='open_duck_mini_v2') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-gamepad"></i> MuJoCo Playground
+                    </a>
+                    <a href="{{ url_for('main.learn', topic='training') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-graduation-cap"></i> Training Guide
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Guide -->
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Usage Guide</h2>
+                <div class="accordion" id="usageAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                Motion Types
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#usageAccordion">
+                            <div class="accordion-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-check text-success"></i> Walking: Stable, balanced gait</li>
+                                    <li><i class="fas fa-check text-success"></i> Trotting: Faster, diagonal gait</li>
+                                    <li><i class="fas fa-check text-success"></i> Galloping: Fastest, bounding gait</li>
+                                    <li><i class="fas fa-check text-success"></i> Jumping: Vertical motion</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                Parameters
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#usageAccordion">
+                            <div class="accordion-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li><strong>Duration:</strong> Length of motion (1-30s)</li>
+                                    <li><strong>Speed:</strong> Movement speed (0.1-2.0 m/s)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                Export Options
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#usageAccordion">
+                            <div class="accordion-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-file-code"></i> JSON format</li>
+                                    <li><i class="fas fa-file-csv"></i> CSV format</li>
+                                    <li><i class="fas fa-file-binary"></i> Binary format</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('motion-form');
+    const log = document.getElementById('generation-log');
+    const playButton = document.getElementById('play-preview');
+    const downloadButton = document.getElementById('download-motion');
+    const previewContainer = document.getElementById('motion-preview');
+    let scene, camera, renderer, robot;
+    let animationFrame;
+    let currentMotion = null;
+
+    // Initialize Three.js scene
+    function initScene() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, previewContainer.clientWidth / previewContainer.clientHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(previewContainer.clientWidth, previewContainer.clientHeight);
+        previewContainer.appendChild(renderer.domElement);
+
+        // Add lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(0, 1, 1);
+        scene.add(directionalLight);
+
+        // Create a simple robot placeholder
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+        robot = new THREE.Mesh(geometry, material);
+        scene.add(robot);
+
+        camera.position.z = 5;
+    }
+
+    // Update robot position based on motion data
+    function updateRobot(motionData, time) {
+        if (!motionData || !motionData.positions) return;
+
+        const frameIndex = Math.floor(time * motionData.fps) % motionData.positions.length;
+        const position = motionData.positions[frameIndex];
+        
+        robot.position.set(position.x, position.y, position.z);
+        robot.rotation.set(position.rx, position.ry, position.rz);
+    }
+
+    // Animation loop
+    function animate(time) {
+        animationFrame = requestAnimationFrame(animate);
+        if (currentMotion) {
+            updateRobot(currentMotion, time / 1000);
+        }
+        renderer.render(scene, camera);
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        camera.aspect = previewContainer.clientWidth / previewContainer.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(previewContainer.clientWidth, previewContainer.clientHeight);
+    });
+
+    // Initialize scene
+    initScene();
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(form);
+        
+        addLogEntry(log, 'Starting motion generation...', 'info');
+        
+        try {
+            const response = await fetch('/open_duck_mini/generate_motion', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                addLogEntry(log, 'Motion generated successfully!', 'success');
+                addLogEntry(log, data.output, 'info');
+                currentMotion = data.motion_data;
+                playButton.disabled = false;
+                downloadButton.disabled = false;
+            } else {
+                addLogEntry(log, 'Generation failed: ' + data.error, 'error');
+            }
+        } catch (error) {
+            addLogEntry(log, 'Error generating motion: ' + error, 'error');
+        }
+    });
+
+    let isPlaying = false;
+    playButton.addEventListener('click', function() {
+        if (!isPlaying) {
+            isPlaying = true;
+            playButton.innerHTML = '<i class="fas fa-pause"></i> Pause Preview';
+            animate(0);
+            addLogEntry(log, 'Playing motion preview...', 'info');
+        } else {
+            isPlaying = false;
+            playButton.innerHTML = '<i class="fas fa-play"></i> Play Preview';
+            cancelAnimationFrame(animationFrame);
+            addLogEntry(log, 'Paused motion preview', 'info');
+        }
+    });
+
+    downloadButton.addEventListener('click', async function() {
+        if (!currentMotion) return;
+        
+        addLogEntry(log, 'Preparing motion file for download...', 'info');
+        
+        try {
+            const response = await fetch('/open_duck_mini/download_motion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(currentMotion)
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `motion_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                addLogEntry(log, 'Motion file downloaded successfully!', 'success');
+            } else {
+                throw new Error('Download failed');
+            }
+        } catch (error) {
+            addLogEntry(log, 'Error downloading motion file: ' + error, 'error');
+        }
+    });
+
+    function addLogEntry(logElement, message, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        
+        const timestamp = document.createElement('span');
+        timestamp.className = 'log-timestamp';
+        timestamp.textContent = `[${new Date().toLocaleTimeString()}]`;
+        
+        const messageSpan = document.createElement('span');
+        messageSpan.className = `log-message log-${type}`;
+        messageSpan.textContent = message;
+        
+        entry.appendChild(timestamp);
+        entry.appendChild(messageSpan);
+        logElement.appendChild(entry);
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+});
+</script>
+{% endblock %} 
