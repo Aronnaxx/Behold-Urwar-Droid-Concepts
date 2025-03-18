@@ -5,65 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Duck Droid Control Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="/static/js/model_loader.js"></script>
+    <!-- Import the component -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <style>
+        model-viewer {
+            width: 100%;
+            height: 400px;
+            background-color: #1a1a1a;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .duck-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        .duck-card:hover {
+            transform: translateY(-5px);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%);
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-4xl font-bold text-gray-800 mb-8">Duck Droid Control Panel</h1>
+        <h1 class="text-5xl font-bold text-gray-800 mb-12 text-center">Duck Droid Control Panel</h1>
 
-        <!-- Hero Section -->
-        <div class="bg-white rounded-lg shadow-md p-8 mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div>
-                    <h2 class="text-3xl font-semibold text-gray-800 mb-4">Welcome to Duck Droids</h2>
-                    <p class="text-gray-600 mb-6">
-                        Explore our collection of advanced robotic duck platforms, from research-grade systems
-                        to educational tools. Each platform offers unique capabilities and learning opportunities.
-                    </p>
-                    <div class="space-x-4">
-                        <a href="#learn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Learn More
-                        </a>
-                        <a href="#duck-types" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                            View Droids
-                        </a>
+        <!-- Duck Types Section -->
+        <div id="duck-types" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Available Duck Types</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {% for duck_id, duck_name in duck_types.items() %}
+                <div class="duck-card bg-white rounded-xl shadow-lg overflow-hidden">
+                    <model-viewer 
+                        src="/static/models/{{ duck_id }}.glb"
+                        camera-controls
+                        auto-rotate
+                        camera-orbit="45deg 55deg 2.5m"
+                        environment-image="neutral"
+                        shadow-intensity="1"
+                        exposure="1"
+                        alt="{{ duck_name }} 3D model">
+                    </model-viewer>
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-2xl font-semibold text-gray-800">{{ duck_name }}</h3>
+                            <a href="/{{ duck_id }}" class="text-blue-500 hover:text-blue-700">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                        <p class="text-gray-600 mb-4">
+                            {% if duck_id == 'bdx' %}
+                            BDX Duck is a highly advanced robotic duck platform designed for research and development.
+                            {% elif duck_id == 'open_duck_mini_v2' %}
+                            Open Duck Mini V2 is an open-source robotic duck platform for education and experimentation.
+                            {% endif %}
+                        </p>
+                        <div class="flex space-x-4">
+                            <a href="/{{ duck_id }}" class="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-center">
+                                View Details
+                            </a>
+                            <a href="/view_playground/{{ duck_id }}" class="flex-1 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-center">
+                                Try Playground
+                            </a>
+                        </div>
                     </div>
                 </div>
-                <div id="hero-model" class="h-96 bg-gray-900 rounded-lg">
-                    <!-- 3D model will be loaded here -->
-                </div>
+                {% endfor %}
             </div>
         </div>
 
         <!-- Learning Center -->
-        <div id="learn" class="mb-12">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6">Learning Center</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div id="learn" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Learning Center</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <a href="/learn/motion_generation" class="block">
-                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
-                        <div id="motion-generation-model" class="h-48 bg-gray-900 rounded-lg mb-4">
-                            <!-- 3D model will be loaded here -->
-                        </div>
+                    <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
+                        <model-viewer 
+                            src="/static/models/motion_generation.glb"
+                            camera-controls
+                            auto-rotate
+                            camera-orbit="45deg 55deg 2.5m"
+                            environment-image="neutral"
+                            shadow-intensity="1"
+                            alt="Motion generation visualization">
+                        </model-viewer>
                         <h3 class="text-xl font-semibold text-gray-800 mb-2">Motion Generation</h3>
                         <p class="text-gray-600">Learn how we create natural, physically plausible movements for our droids.</p>
                     </div>
                 </a>
                 <a href="/learn/training" class="block">
-                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
-                        <div id="training-model" class="h-48 bg-gray-900 rounded-lg mb-4">
-                            <!-- 3D model will be loaded here -->
-                        </div>
+                    <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
+                        <model-viewer 
+                            src="/static/models/training.glb"
+                            camera-controls
+                            auto-rotate
+                            camera-orbit="45deg 55deg 2.5m"
+                            environment-image="neutral"
+                            shadow-intensity="1"
+                            alt="Training process visualization">
+                        </model-viewer>
                         <h3 class="text-xl font-semibold text-gray-800 mb-2">Training Process</h3>
                         <p class="text-gray-600">Understand how we use reinforcement learning to teach complex behaviors.</p>
                     </div>
                 </a>
                 <a href="/learn/playground" class="block">
-                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
-                        <div id="playground-model" class="h-48 bg-gray-900 rounded-lg mb-4">
-                            <!-- 3D model will be loaded here -->
-                        </div>
+                    <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
+                        <model-viewer 
+                            src="/static/models/playground.glb"
+                            camera-controls
+                            auto-rotate
+                            camera-orbit="45deg 55deg 2.5m"
+                            environment-image="neutral"
+                            shadow-intensity="1"
+                            alt="Mujoco playground visualization">
+                        </model-viewer>
                         <h3 class="text-xl font-semibold text-gray-800 mb-2">Mujoco Playground</h3>
                         <p class="text-gray-600">Explore our simulation environment for testing and visualization.</p>
                     </div>
@@ -71,69 +128,29 @@
             </div>
         </div>
 
-        <!-- Duck Types -->
-        <div id="duck-types" class="mb-12">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6">Available Duck Types</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {% for duck_id, duck_name in duck_types.items() %}
-                <a href="/{{ duck_id }}" class="block">
-                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
-                        <div id="{{ duck_id }}-model" class="h-48 bg-gray-900 rounded-lg mb-4">
-                            <!-- 3D model will be loaded here -->
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-2xl font-semibold text-gray-800">{{ duck_name }}</h3>
-                            <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </div>
-                        <p class="text-gray-600 mt-2">
-                            {% if duck_id == 'bdx' %}
-                            BDX Duck is a highly advanced robotic duck platform designed for research and development.
-                            {% elif duck_id == 'open_duck_mini_v2' %}
-                            Open Duck Mini V2 is an open-source robotic duck platform for education and experimentation.
-                            {% endif %}
-                        </p>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-
         <!-- Project Information -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4">About Duck Droids</h2>
-            <p class="text-gray-600 mb-4">
+        <div class="gradient-bg rounded-xl shadow-lg p-8 text-white">
+            <h2 class="text-3xl font-bold mb-6 text-center">About Duck Droids</h2>
+            <p class="text-gray-200 mb-8 text-center max-w-3xl mx-auto">
                 The Duck Droids project is a collaborative effort to develop advanced robotic duck platforms.
                 Each duck type has its own unique characteristics and capabilities, designed for different use cases
                 from research to education.
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="font-medium text-gray-700 mb-2">Motion Generation</h3>
-                    <p class="text-gray-600">Generate reference motions for training and testing.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white bg-opacity-10 p-6 rounded-lg backdrop-blur-sm">
+                    <h3 class="text-xl font-semibold mb-3">Motion Generation</h3>
+                    <p class="text-gray-200">Generate reference motions for training and testing.</p>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="font-medium text-gray-700 mb-2">Training</h3>
-                    <p class="text-gray-600">Train models using advanced reinforcement learning techniques.</p>
+                <div class="bg-white bg-opacity-10 p-6 rounded-lg backdrop-blur-sm">
+                    <h3 class="text-xl font-semibold mb-3">Training</h3>
+                    <p class="text-gray-200">Train models using advanced reinforcement learning techniques.</p>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="font-medium text-gray-700 mb-2">Playground</h3>
-                    <p class="text-gray-600">Visualize and test trained models in a Mujoco environment.</p>
+                <div class="bg-white bg-opacity-10 p-6 rounded-lg backdrop-blur-sm">
+                    <h3 class="text-xl font-semibold mb-3">Playground</h3>
+                    <p class="text-gray-200">Visualize and test trained models in a Mujoco environment.</p>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-        // Initialize all 3D viewers
-        createModelViewer('hero-model', '/static/models/hero.json');
-        createModelViewer('motion-generation-model', '/static/models/motion_generation.json');
-        createModelViewer('training-model', '/static/models/training.json');
-        createModelViewer('playground-model', '/static/models/playground.json');
-        {% for duck_id in duck_types %}
-        createModelViewer('{{ duck_id }}-model', '/static/models/{{ duck_id }}.json');
-        {% endfor %}
-    </script>
 </body>
 </html> 
