@@ -35,8 +35,11 @@ install_submodule_requirements() {
     if [ -f "$submodule/$requirements_file" ]; then
         echo "📥 Installing requirements for $submodule..."
         pip install -r "$submodule/$requirements_file"
+    elif [ -f "$submodule/pyproject.toml" ]; then
+        echo "📥 Installing requirements for $submodule (using pyproject.toml)..."
+        pip install -e "$submodule"
     else
-        echo "⚠️ No requirements file found for $submodule at $requirements_file"
+        echo "⚠️ No requirements file or pyproject.toml found for $submodule"
     fi
 }
 
@@ -54,16 +57,17 @@ echo "📥 Installing PyTorch..."
 if [ "$CUDA_AVAILABLE" = true ]; then
     echo "Installing PyTorch with CUDA support..."
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-    install_submodule_requirements "submodules/awd" "requirements.txt"
+    install_submodule_requirements "submodules/awd/" "requirements.txt"
 else
     echo "Installing PyTorch CPU version..."
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 fi
 
 # Install requirements for each submodule
-install_submodule_requirements "submodules/open_duck_mini" "requirements.txt"
-install_submodule_requirements "submodules/open_duck_playground" "requirements.txt"
-install_submodule_requirements "submodules/open_duck_reference_motion_generator" "requirements.txt"
+echo "📥 Installing submodule dependencies..."
+install_submodule_requirements "submodules/open_duck_mini/" "requirements.txt"
+install_submodule_requirements "submodules/open_duck_reference_motion_generator/" "requirements.txt"
+install_submodule_requirements "submodules/open_duck_playground/" "requirements.txt"
 
 # Install Flask application requirements
 echo "📥 Installing Flask application requirements..."
