@@ -54,8 +54,8 @@ graph TD
    ```
 
 ### Webpage preview
-![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/images/main_page.png "Logo Title Text 1")
-![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/images/training_page.png "Logo Title Text 1")
+![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/blob/main/images/main_page.png "Main page")
+![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/blob/main/images/training_page.png "Training page")
 
 
 ## Development
