@@ -101,7 +101,7 @@ def launch():
 
         # Launch the application with debug output
         result = subprocess.Popen(
-            ["python", "-u", "open_duck_reference_motion_generator/gait_playground.py", "--duck", "open_duck_mini_v2"],
+            ["uv", "run", "open_duck_reference_motion_generator/gait_playground.py", "--duck", "open_duck_mini_v2"],
             cwd=cwd,
             env=env,
             stdout=subprocess.PIPE,

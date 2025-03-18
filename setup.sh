@@ -27,22 +27,6 @@ echo "📥 Installing common dependencies..."
 pip install --upgrade pip
 pip install wheel setuptools
 
-# Function to install requirements from a submodule
-install_submodule_requirements() {
-    local submodule=$1
-    local requirements_file=$2
-    
-    if [ -f "$submodule/$requirements_file" ]; then
-        echo "📥 Installing requirements for $submodule..."
-        pip install -r "$submodule/$requirements_file"
-    elif [ -f "$submodule/pyproject.toml" ]; then
-        echo "📥 Installing requirements for $submodule (using pyproject.toml)..."
-        pip install -e "$submodule"
-    else
-        echo "⚠️ No requirements file or pyproject.toml found for $submodule"
-    fi
-}
-
 # Check for CUDA support
 if command -v nvidia-smi &> /dev/null; then
     echo "✅ NVIDIA GPU detected. CUDA support is available."
@@ -63,12 +47,6 @@ else
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 fi
 
-# Install requirements for each submodule
-echo "📥 Installing submodule dependencies..."
-install_submodule_requirements "submodules/open_duck_mini/" "requirements.txt"
-install_submodule_requirements "submodules/open_duck_reference_motion_generator/" "requirements.txt"
-install_submodule_requirements "submodules/open_duck_playground/" "requirements.txt"
-
 # Install Flask application requirements
 echo "📥 Installing Flask application requirements..."
 pip install -r requirements.txt
@@ -80,9 +58,6 @@ if ! command -v uv &> /dev/null; then
 fi
 
 # Create necessary directories
-echo "📁 Creating necessary directories..."
-mkdir -p generated_motions
-mkdir -p submodules/open_duck_playground/open_duck_mini_v2/data
 echo ""
 echo "---------------------------------------------------------------"
 echo ""
