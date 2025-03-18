@@ -5,37 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Duck Droid Control Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="/static/js/model_loader.js"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-4xl font-bold text-gray-800 mb-8">Duck Droid Control Panel</h1>
 
-        <!-- Duck Types Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for duck_id, duck_name in duck_types.items() %}
-            <a href="/{{ duck_id }}" class="block">
-                <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-semibold text-gray-800">{{ duck_name }}</h2>
-                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                    <p class="text-gray-600">
-                        {% if duck_id == 'bdx' %}
-                        BDX Duck is a highly advanced robotic duck platform designed for research and development.
-                        {% elif duck_id == 'open_duck_mini_v2' %}
-                        Open Duck Mini V2 is an open-source robotic duck platform for education and experimentation.
-                        {% endif %}
+        <!-- Hero Section -->
+        <div class="bg-white rounded-lg shadow-md p-8 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h2 class="text-3xl font-semibold text-gray-800 mb-4">Welcome to Duck Droids</h2>
+                    <p class="text-gray-600 mb-6">
+                        Explore our collection of advanced robotic duck platforms, from research-grade systems
+                        to educational tools. Each platform offers unique capabilities and learning opportunities.
                     </p>
+                    <div class="space-x-4">
+                        <a href="#learn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Learn More
+                        </a>
+                        <a href="#duck-types" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                            View Droids
+                        </a>
+                    </div>
                 </div>
-            </a>
-            {% endfor %}
+                <div id="hero-model" class="h-96 bg-gray-900 rounded-lg">
+                    <!-- 3D model will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Center -->
+        <div id="learn" class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Learning Center</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <a href="/learn/motion_generation" class="block">
+                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
+                        <div id="motion-generation-model" class="h-48 bg-gray-900 rounded-lg mb-4">
+                            <!-- 3D model will be loaded here -->
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Motion Generation</h3>
+                        <p class="text-gray-600">Learn how we create natural, physically plausible movements for our droids.</p>
+                    </div>
+                </a>
+                <a href="/learn/training" class="block">
+                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
+                        <div id="training-model" class="h-48 bg-gray-900 rounded-lg mb-4">
+                            <!-- 3D model will be loaded here -->
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Training Process</h3>
+                        <p class="text-gray-600">Understand how we use reinforcement learning to teach complex behaviors.</p>
+                    </div>
+                </a>
+                <a href="/learn/playground" class="block">
+                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
+                        <div id="playground-model" class="h-48 bg-gray-900 rounded-lg mb-4">
+                            <!-- 3D model will be loaded here -->
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Mujoco Playground</h3>
+                        <p class="text-gray-600">Explore our simulation environment for testing and visualization.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Duck Types -->
+        <div id="duck-types" class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Available Duck Types</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for duck_id, duck_name in duck_types.items() %}
+                <a href="/{{ duck_id }}" class="block">
+                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
+                        <div id="{{ duck_id }}-model" class="h-48 bg-gray-900 rounded-lg mb-4">
+                            <!-- 3D model will be loaded here -->
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-2xl font-semibold text-gray-800">{{ duck_name }}</h3>
+                            <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 mt-2">
+                            {% if duck_id == 'bdx' %}
+                            BDX Duck is a highly advanced robotic duck platform designed for research and development.
+                            {% elif duck_id == 'open_duck_mini_v2' %}
+                            Open Duck Mini V2 is an open-source robotic duck platform for education and experimentation.
+                            {% endif %}
+                        </p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
         </div>
 
         <!-- Project Information -->
-        <div class="mt-12 bg-white rounded-lg shadow-md p-6">
+        <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-2xl font-semibold text-gray-800 mb-4">About Duck Droids</h2>
             <p class="text-gray-600 mb-4">
                 The Duck Droids project is a collaborative effort to develop advanced robotic duck platforms.
@@ -60,112 +126,14 @@
     </div>
 
     <script>
-        // Status update function
-        function updateStatus() {
-            fetch('/status')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('training-status').textContent = data.training_running ? 'Running' : 'Not Running';
-                    document.getElementById('training-status').className = `text-lg font-semibold ${data.training_running ? 'text-green-600' : 'text-red-600'}`;
-                    document.getElementById('motions-status').textContent = data.generated_motions ? 'Yes' : 'No';
-                    document.getElementById('motions-status').className = `text-lg font-semibold ${data.generated_motions ? 'text-green-600' : 'text-red-600'}`;
-                    document.getElementById('playground-status').textContent = data.playground_ready ? 'Yes' : 'No';
-                    document.getElementById('playground-status').className = `text-lg font-semibold ${data.playground_ready ? 'text-green-600' : 'text-red-600'}`;
-                });
-        }
-
-        // Log function
-        function log(message) {
-            const logOutput = document.getElementById('log-output');
-            const timestamp = new Date().toLocaleTimeString();
-            logOutput.innerHTML += `<div class="text-gray-400">[${timestamp}] ${message}</div>`;
-            logOutput.scrollTop = logOutput.scrollHeight;
-        }
-
-        // Generate motions
-        function generateMotions() {
-            const duckType = document.getElementById('duck-type').value;
-            const numMotions = document.getElementById('num-motions').value;
-            
-            log(`Starting motion generation for ${duckType}...`);
-            
-            fetch('/generate_motions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    duck_type: duckType,
-                    num_motions: parseInt(numMotions)
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    log('✅ Motions generated successfully!');
-                } else {
-                    log(`❌ Error: ${data.error}`);
-                }
-                updateStatus();
-            });
-        }
-
-        // Start training
-        function startTraining() {
-            const duckType = document.getElementById('duck-type').value;
-            
-            log(`Starting training for ${duckType}...`);
-            
-            fetch('/train', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    duck_type: duckType
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    log('✅ Training started successfully!');
-                } else {
-                    log(`❌ Error: ${data.error}`);
-                }
-                updateStatus();
-            });
-        }
-
-        // Run inference
-        function runInference() {
-            const duckType = document.getElementById('duck-type').value;
-            const modelPath = document.getElementById('model-path').value;
-            
-            log(`Starting inference for ${duckType} with model ${modelPath}...`);
-            
-            fetch('/infer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    duck_type: duckType,
-                    model_path: modelPath
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    log('✅ Inference completed successfully!');
-                } else {
-                    log(`❌ Error: ${data.error}`);
-                }
-            });
-        }
-
-        // Update status every 5 seconds
-        setInterval(updateStatus, 5000);
-        updateStatus();
+        // Initialize all 3D viewers
+        createModelViewer('hero-model', '/static/models/hero.json');
+        createModelViewer('motion-generation-model', '/static/models/motion_generation.json');
+        createModelViewer('training-model', '/static/models/training.json');
+        createModelViewer('playground-model', '/static/models/playground.json');
+        {% for duck_id in duck_types %}
+        createModelViewer('{{ duck_id }}-model', '/static/models/{{ duck_id }}.json');
+        {% endfor %}
     </script>
 </body>
 </html> 

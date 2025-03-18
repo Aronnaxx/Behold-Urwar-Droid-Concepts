@@ -1,0 +1,12 @@
+{
+  "name": "duck-droid-control-panel",
+  "version": "1.0.0",
+  "description": "Web interface for Duck Droid Control Panel",
+  "main": "static/js/generate_models.js",
+  "scripts": {
+    "generate-models": "node static/js/generate_models.js"
+  },
+  "dependencies": {
+    "three": "^0.128.0"
+  }
+} 
