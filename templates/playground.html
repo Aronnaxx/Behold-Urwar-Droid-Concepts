@@ -1,107 +1,262 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mujoco Playground - {{ duck_type }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800">Mujoco Playground</h1>
-            <div class="space-x-4">
-                <a href="/{{ duck_type }}" class="text-blue-500 hover:text-blue-700">← Back to {{ duck_type }}</a>
-                <button onclick="stopPlayground()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                    Stop Playground
-                </button>
-            </div>
-        </div>
+{% extends "base.html" %}
 
-        <!-- Playground Status -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-4">Playground Status</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="font-medium text-gray-700">Model</h3>
-                    <p class="text-lg font-semibold text-gray-800">{{ model_name }}</p>
+{% block title %}Mujoco Playground - {{ duck.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .playground-container {
+        width: 100%;
+        height: 600px;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        position: relative;
+    }
+    .control-panel {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    .status-panel {
+        position: absolute;
+        bottom: 1rem;
+        left: 1rem;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    .control-group {
+        margin-bottom: 1rem;
+    }
+    .control-group:last-child {
+        margin-bottom: 0;
+    }
+    .status-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .status-item:last-child {
+        margin-bottom: 0;
+    }
+    .status-label {
+        min-width: 120px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.duck_page', duck_type=duck.type) }}">{{ duck.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Playground</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">Mujoco Playground</h1>
+                <p class="card-text">Interactive environment for testing and visualizing {{ duck.name }} behaviors.</p>
+                
+                <div class="playground-container">
+                    <div id="mujoco-canvas"></div>
+                    
+                    <div class="control-panel">
+                        <h3>Controls</h3>
+                        <div class="control-group">
+                            <label class="form-label">Environment</label>
+                            <select class="form-select" id="environment-select">
+                                {% for env in environments %}
+                                <option value="{{ env.id }}">{{ env.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label class="form-label">Model</label>
+                            <select class="form-select" id="model-select">
+                                {% for model in models %}
+                                <option value="{{ model.path }}">{{ model.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <button class="btn btn-primary" onclick="startSimulation()">
+                                <i class="fas fa-play"></i> Start
+                            </button>
+                            <button class="btn btn-danger" onclick="stopSimulation()">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                        </div>
+                        <div class="control-group">
+                            <label class="form-label">Speed</label>
+                            <input type="range" class="form-range" id="speed-control" min="0.1" max="2" step="0.1" value="1">
+                        </div>
+                    </div>
+                    
+                    <div class="status-panel">
+                        <h3>Status</h3>
+                        <div class="status-item">
+                            <span class="status-label">Simulation:</span>
+                            <span id="simulation-status" class="badge bg-secondary">Stopped</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">FPS:</span>
+                            <span id="fps-counter">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Time:</span>
+                            <span id="time-counter">0.00s</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <h3 class="font-medium text-gray-700">Status</h3>
-                    <p id="playground-status" class="text-lg font-semibold text-green-600">Running</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Playground View -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-semibold mb-4">Playground View</h2>
-            <div class="aspect-w-16 aspect-h-9 bg-gray-900 rounded-lg overflow-hidden">
-                <iframe id="playground-frame" src="http://localhost:8080" class="w-full h-full"></iframe>
-            </div>
-        </div>
-
-        <!-- Log Panel -->
-        <div class="bg-white rounded-lg shadow-md p-6 mt-8">
-            <h2 class="text-2xl font-semibold mb-4">Log Output</h2>
-            <div id="log-output" class="bg-gray-900 text-gray-100 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        // Log function
-        function log(message) {
-            const logOutput = document.getElementById('log-output');
-            const timestamp = new Date().toLocaleTimeString();
-            logOutput.innerHTML += `<div class="text-gray-400">[${timestamp}] ${message}</div>`;
-            logOutput.scrollTop = logOutput.scrollHeight;
-        }
-
-        // Stop playground
-        function stopPlayground() {
-            log('Stopping playground...');
-            
-            fetch('/stop_playground', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    duck_type: '{{ duck_type }}'
-                })
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+    let scene, camera, renderer, controls;
+    let simulation = null;
+    let lastTime = 0;
+    let frameCount = 0;
+    let fps = 0;
+    
+    function init() {
+        // Scene setup
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        const container = document.getElementById('mujoco-canvas');
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+        
+        // Controls
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(0, 1, 0);
+        scene.add(directionalLight);
+        
+        // Camera position
+        camera.position.set(0, 2, 5);
+        camera.lookAt(0, 0, 0);
+        
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
+    }
+    
+    function onWindowResize() {
+        const container = document.getElementById('mujoco-canvas');
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+    
+    function startSimulation() {
+        if (simulation) return;
+        
+        const envId = document.getElementById('environment-select').value;
+        const modelPath = document.getElementById('model-select').value;
+        
+        fetch('/start_simulation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                environment_id: envId,
+                model_path: modelPath
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    log('✅ Playground stopped successfully!');
-                    window.location.href = '/{{ duck_type }}';
-                } else {
-                    log(`❌ Error: ${data.error}`);
-                }
-            });
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                simulation = data.simulation_id;
+                document.getElementById('simulation-status').className = 'badge bg-success';
+                document.getElementById('simulation-status').textContent = 'Running';
+                animate();
+            } else {
+                alert('Failed to start simulation: ' + data.error);
+            }
+        });
+    }
+    
+    function stopSimulation() {
+        if (!simulation) return;
+        
+        fetch('/stop_simulation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                simulation_id: simulation
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                simulation = null;
+                document.getElementById('simulation-status').className = 'badge bg-secondary';
+                document.getElementById('simulation-status').textContent = 'Stopped';
+            } else {
+                alert('Failed to stop simulation: ' + data.error);
+            }
+        });
+    }
+    
+    function updateFPS() {
+        const now = performance.now();
+        frameCount++;
+        
+        if (now - lastTime >= 1000) {
+            fps = frameCount;
+            frameCount = 0;
+            lastTime = now;
+            document.getElementById('fps-counter').textContent = fps;
         }
-
-        // Check playground status
-        function checkPlaygroundStatus() {
-            fetch('/playground_status')
-                .then(response => response.json())
-                .then(data => {
-                    const statusElement = document.getElementById('playground-status');
-                    if (!data.running) {
-                        statusElement.textContent = 'Stopped';
-                        statusElement.className = 'text-lg font-semibold text-red-600';
-                        log('Playground has stopped');
-                        setTimeout(() => {
-                            window.location.href = '/{{ duck_type }}';
-                        }, 2000);
-                    }
-                });
-        }
-
-        // Check status every 5 seconds
-        setInterval(checkPlaygroundStatus, 5000);
-        checkPlaygroundStatus();
-    </script>
-</body>
-</html> 
+    }
+    
+    function animate() {
+        if (!simulation) return;
+        
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+        updateFPS();
+        
+        // Update time counter
+        const time = parseFloat(document.getElementById('time-counter').textContent);
+        const speed = parseFloat(document.getElementById('speed-control').value);
+        document.getElementById('time-counter').textContent = (time + 1/60 * speed).toFixed(2) + 's';
+    }
+    
+    // Initialize the playground
+    init();
+</script>
+{% endblock %} 

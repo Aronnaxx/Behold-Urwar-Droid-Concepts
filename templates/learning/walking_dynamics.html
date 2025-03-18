@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Walking Dynamics - Learning Center{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}#learning">Learning Center</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Advanced Walking Dynamics</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h1 class="card-title">Advanced Walking Dynamics</h1>
+                <div class="model-viewer mb-4">
+                    <model-viewer 
+                        src="{{ url_for('static', filename='models/walking_dynamics.glb') }}"
+                        camera-controls
+                        auto-rotate
+                        camera-orbit="45deg 55deg 2.5m"
+                        environment-image="neutral"
+                        shadow-intensity="1"
+                        alt="Advanced Walking Dynamics visualization">
+                    </model-viewer>
+                </div>
+                
+                <div class="learning-section">
+                    <h2>Overview</h2>
+                    <p>Advanced walking dynamics explores the complex interactions between the Duck Droid's mechanical structure and its environment. Key aspects include:</p>
+                    <ul>
+                        <li>Dynamic balance and stability</li>
+                        <li>Energy efficiency optimization</li>
+                        <li>Terrain adaptation</li>
+                        <li>Gait optimization</li>
+                    </ul>
+                </div>
+
+                <div class="learning-section">
+                    <h2>How It Works</h2>
+                    <p>The advanced walking system incorporates these key components:</p>
+                    <ol>
+                        <li><strong>Dynamic Balance:</strong> Continuous adjustment of center of mass and support polygon</li>
+                        <li><strong>Energy Management:</strong> Optimization of joint movements and power consumption</li>
+                        <li><strong>Terrain Analysis:</strong> Real-time assessment and adaptation to surface conditions</li>
+                        <li><strong>Gait Planning:</strong> Generation of optimal walking patterns for different scenarios</li>
+                        <li><strong>Stability Control:</strong> Active maintenance of stability during movement</li>
+                    </ol>
+                </div>
+
+                <div class="learning-section">
+                    <h2>Examples</h2>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Dynamic Balance</h5>
+                                    <p class="card-text">Maintaining stability during complex movements.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Terrain Adaptation</h5>
+                                    <p class="card-text">Adjusting gait for different surface conditions.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2>Key Concepts</h2>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Dynamic Balance
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Energy Efficiency
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Terrain Adaptation
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Gait Optimization
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h2>Resources</h2>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Walking Dynamics Guide</h5>
+                        <p class="card-text">Comprehensive guide to advanced walking mechanics.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Stability Analysis</h5>
+                        <p class="card-text">Understanding and implementing stability control.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+{% endblock %} 

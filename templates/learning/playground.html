@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Mujoco Playground - Learning Center{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}#learning">Learning Center</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Mujoco Playground</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h1 class="card-title">Mujoco Playground</h1>
+                <div class="model-viewer mb-4">
+                    <model-viewer 
+                        src="{{ url_for('static', filename='models/playground.glb') }}"
+                        camera-controls
+                        auto-rotate
+                        camera-orbit="45deg 55deg 2.5m"
+                        environment-image="neutral"
+                        shadow-intensity="1"
+                        alt="Mujoco Playground visualization">
+                    </model-viewer>
+                </div>
+                
+                <div class="learning-section">
+                    <h2>Overview</h2>
+                    <p>The Mujoco Playground provides an interactive environment for testing and visualizing Duck Droid behaviors. This environment offers:</p>
+                    <ul>
+                        <li>Real-time simulation and visualization</li>
+                        <li>Interactive control and parameter adjustment</li>
+                        <li>Performance monitoring and analysis</li>
+                        <li>Behavior testing and validation</li>
+                    </ul>
+                </div>
+
+                <div class="learning-section">
+                    <h2>How It Works</h2>
+                    <p>The playground environment provides these key features:</p>
+                    <ol>
+                        <li><strong>Environment Configuration:</strong> Set up simulation parameters and conditions</li>
+                        <li><strong>Model Loading:</strong> Load and configure different Duck Droid models</li>
+                        <li><strong>Interactive Controls:</strong> Real-time control and parameter adjustment</li>
+                        <li><strong>Performance Metrics:</strong> Monitor and analyze robot performance</li>
+                        <li><strong>Data Collection:</strong> Gather and analyze simulation data</li>
+                    </ol>
+                </div>
+
+                <div class="learning-section">
+                    <h2>Examples</h2>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Basic Environment</h5>
+                                    <p class="card-text">Simple environment for basic behavior testing.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Advanced Environment</h5>
+                                    <p class="card-text">Complex environment with obstacles and challenges.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2>Key Concepts</h2>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Physics Simulation
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Real-time Control
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Performance Analysis
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Data Visualization
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h2>Resources</h2>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Mujoco Guide</h5>
+                        <p class="card-text">Guide to using the Mujoco physics engine.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Playground Tutorial</h5>
+                        <p class="card-text">Step-by-step guide to using the playground.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+{% endblock %} 

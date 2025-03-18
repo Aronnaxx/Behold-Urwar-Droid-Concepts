@@ -30,6 +30,27 @@ graph TD
 - **Open Duck Playground**: Development and testing environment
 - **Open Duck Reference Motion Generator**: Tools for motion planning and reference generation
 
+## Project Structure
+
+```
+Behold-Urwar-Droid-Concepts/
+├── app/                    # Main application package
+│   ├── routes/            # Route handlers
+│   ├── services/          # Business logic
+│   ├── utils/             # Utility functions
+│   └── config.py          # Configuration
+├── docs/                  # Documentation
+│   └── learning/          # Learning center content
+├── submodules/            # Git submodules
+│   ├── open_duck_mini/    # Core Duck Droid implementation
+│   ├── awd/               # Advanced Walking Dynamics
+│   ├── open_duck_playground/  # Development environment
+│   └── open_duck_reference_motion_generator/  # Motion planning tools
+├── static/                # Static assets
+├── templates/             # HTML templates
+└── scripts/              # Utility scripts
+```
+
 ## Quick Start
 
 1. Clone this repository:
@@ -48,33 +69,30 @@ graph TD
    ./setup.sh
    ```
 
-4. Launch the page:
+4. Launch the application:
    ```bash
    python app.py
    ```
+## Learning Center
 
-### Webpage preview
-![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/blob/main/images/main_page.png "Main page")
-![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/blob/main/images/training_page.png "Training page")
+The project includes a comprehensive learning center with documentation for each component:
 
+- [Motion Generation](docs/learning/motion_generation/README.md)
+- [Training Process](docs/learning/training/README.md)
+- [Mujoco Playground](docs/learning/playground/README.md)
+- [Advanced Walking Dynamics](docs/learning/awd/README.md)
 
 ## Development
 
 Each component is maintained as a git submodule, allowing for independent development while keeping everything organized in one place.
 
-### Directory Structure
+### Adding New Features
 
-```
-Behold-Urwar-Droid-Concepts/
-├── submodules/
-│   ├── open_duck_mini/          # Core Duck Droid implementation
-│   ├── awd/                     # Advanced Walking Dynamics
-│   ├── open_duck_playground/    # Development environment
-│   └── open_duck_reference_motion_generator/  # Motion planning tools
-├── docs/                        # Documentation
-├── setup.sh                     # Setup script
-└── README.md                    # This file
-```
+1. Create a new branch for your feature
+2. Make changes in the appropriate submodule
+3. Update the main application if needed
+4. Add documentation in the learning center
+5. Create a pull request
 
 ## Contributing
 

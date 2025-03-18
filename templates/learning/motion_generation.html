@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Motion Generation - Learning Center{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}#learning">Learning Center</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Motion Generation</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h1 class="card-title">Motion Generation</h1>
+                <div class="model-viewer mb-4">
+                    <model-viewer 
+                        src="{{ url_for('static', filename='models/motion_generation.glb') }}"
+                        camera-controls
+                        auto-rotate
+                        camera-orbit="45deg 55deg 2.5m"
+                        environment-image="neutral"
+                        shadow-intensity="1"
+                        alt="Motion Generation visualization">
+                    </model-viewer>
+                </div>
+                
+                <div class="learning-section">
+                    <h2>Overview</h2>
+                    <p>Motion generation is a crucial component of the Duck Droid system that creates natural and efficient walking patterns. This process involves:</p>
+                    <ul>
+                        <li>Analyzing reference motions from human walking data</li>
+                        <li>Optimizing motion parameters for the robot's specific structure</li>
+                        <li>Generating smooth, continuous walking patterns</li>
+                        <li>Ensuring stability and energy efficiency</li>
+                    </ul>
+                </div>
+
+                <div class="learning-section">
+                    <h2>How It Works</h2>
+                    <p>The motion generation process follows these key steps:</p>
+                    <ol>
+                        <li><strong>Data Collection:</strong> Gather reference motion data from human walking patterns</li>
+                        <li><strong>Preprocessing:</strong> Clean and normalize the motion data</li>
+                        <li><strong>Parameter Optimization:</strong> Adjust motion parameters for the robot's structure</li>
+                        <li><strong>Trajectory Generation:</strong> Create smooth, continuous walking patterns</li>
+                        <li><strong>Validation:</strong> Test and verify the generated motions</li>
+                    </ol>
+                </div>
+
+                <div class="learning-section">
+                    <h2>Examples</h2>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Basic Walking Pattern</h5>
+                                    <p class="card-text">A simple walking pattern showing the basic gait cycle.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Advanced Maneuvers</h5>
+                                    <p class="card-text">Complex walking patterns including turns and transitions.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2>Key Concepts</h2>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Motion Planning
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Trajectory Optimization
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Stability Analysis
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Energy Efficiency
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h2>Resources</h2>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Motion Planning Guide</h5>
+                        <p class="card-text">Comprehensive guide to motion planning techniques.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Optimization Tutorial</h5>
+                        <p class="card-text">Step-by-step tutorial on motion optimization.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+{% endblock %} 

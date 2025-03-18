@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Training Process - Learning Center{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}#learning">Learning Center</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Training Process</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h1 class="card-title">Training Process</h1>
+                <div class="model-viewer mb-4">
+                    <model-viewer 
+                        src="{{ url_for('static', filename='models/training_process.glb') }}"
+                        camera-controls
+                        auto-rotate
+                        camera-orbit="45deg 55deg 2.5m"
+                        environment-image="neutral"
+                        shadow-intensity="1"
+                        alt="Training Process visualization">
+                    </model-viewer>
+                </div>
+                
+                <div class="learning-section">
+                    <h2>Overview</h2>
+                    <p>The training process is essential for developing robust walking behaviors in the Duck Droid. This process involves:</p>
+                    <ul>
+                        <li>Reinforcement learning for motion control</li>
+                        <li>Environment simulation and testing</li>
+                        <li>Performance optimization and validation</li>
+                        <li>Behavior refinement and adaptation</li>
+                    </ul>
+                </div>
+
+                <div class="learning-section">
+                    <h2>How It Works</h2>
+                    <p>The training process follows these key steps:</p>
+                    <ol>
+                        <li><strong>Environment Setup:</strong> Configure simulation environment and parameters</li>
+                        <li><strong>Model Initialization:</strong> Initialize the neural network model</li>
+                        <li><strong>Training Loop:</strong> Iterative training with reinforcement learning</li>
+                        <li><strong>Evaluation:</strong> Test and validate the trained model</li>
+                        <li><strong>Optimization:</strong> Fine-tune and improve performance</li>
+                    </ol>
+                </div>
+
+                <div class="learning-section">
+                    <h2>Examples</h2>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Basic Training</h5>
+                                    <p class="card-text">Simple training scenario for basic walking.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Advanced Training</h5>
+                                    <p class="card-text">Complex training scenarios with obstacles.</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm">View Example</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2>Key Concepts</h2>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Reinforcement Learning
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Environment Simulation
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Model Optimization
+                </div>
+                <div class="key-concept">
+                    <i class="fas fa-lightbulb text-warning"></i> Performance Validation
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h2>Resources</h2>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">RL Training Guide</h5>
+                        <p class="card-text">Guide to reinforcement learning for robotics.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="card resource-card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Simulation Tutorial</h5>
+                        <p class="card-text">Setting up and using the simulation environment.</p>
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-external-link-alt"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+{% endblock %} 
