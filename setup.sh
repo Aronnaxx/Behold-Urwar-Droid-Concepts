@@ -17,11 +17,6 @@ if ! command -v pip3 &> /dev/null; then
     exit 1
 fi
 
-# Create and activate virtual environment
-echo "📦 Creating virtual environment..."
-python3 -m venv .venv
-source .venv/bin/activate
-
 # Install common dependencies
 echo "📥 Installing common dependencies..."
 pip install --upgrade pip
