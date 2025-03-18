@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mujoco Playground - {{ duck_type }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Mujoco Playground</h1>
+            <div class="space-x-4">
+                <a href="/{{ duck_type }}" class="text-blue-500 hover:text-blue-700">← Back to {{ duck_type }}</a>
+                <button onclick="stopPlayground()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Stop Playground
+                </button>
+            </div>
+        </div>
+
+        <!-- Playground Status -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Playground Status</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-medium text-gray-700">Model</h3>
+                    <p class="text-lg font-semibold text-gray-800">{{ model_name }}</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-medium text-gray-700">Status</h3>
+                    <p id="playground-status" class="text-lg font-semibold text-green-600">Running</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Playground View -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-4">Playground View</h2>
+            <div class="aspect-w-16 aspect-h-9 bg-gray-900 rounded-lg overflow-hidden">
+                <iframe id="playground-frame" src="http://localhost:8080" class="w-full h-full"></iframe>
+            </div>
+        </div>
+
+        <!-- Log Panel -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+            <h2 class="text-2xl font-semibold mb-4">Log Output</h2>
+            <div id="log-output" class="bg-gray-900 text-gray-100 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Log function
+        function log(message) {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.innerHTML += `<div class="text-gray-400">[${timestamp}] ${message}</div>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // Stop playground
+        function stopPlayground() {
+            log('Stopping playground...');
+            
+            fetch('/stop_playground', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    duck_type: '{{ duck_type }}'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ Playground stopped successfully!');
+                    window.location.href = '/{{ duck_type }}';
+                } else {
+                    log(`❌ Error: ${data.error}`);
+                }
+            });
+        }
+
+        // Check playground status
+        function checkPlaygroundStatus() {
+            fetch('/playground_status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusElement = document.getElementById('playground-status');
+                    if (!data.running) {
+                        statusElement.textContent = 'Stopped';
+                        statusElement.className = 'text-lg font-semibold text-red-600';
+                        log('Playground has stopped');
+                        setTimeout(() => {
+                            window.location.href = '/{{ duck_type }}';
+                        }, 2000);
+                    }
+                });
+        }
+
+        // Check status every 5 seconds
+        setInterval(checkPlaygroundStatus, 5000);
+        checkPlaygroundStatus();
+    </script>
+</body>
+</html> 

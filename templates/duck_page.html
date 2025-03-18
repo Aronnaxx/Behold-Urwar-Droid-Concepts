@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ duck_type }} - Duck Droid Control Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">{{ duck_type }}</h1>
+            <a href="/" class="text-blue-500 hover:text-blue-700">← Back to Dashboard</a>
+        </div>
+
+        <!-- Status Panel -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">System Status</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-medium text-gray-700">Training Status</h3>
+                    <p id="training-status" class="text-lg font-semibold text-green-600">Not Running</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-medium text-gray-700">Motions Generated</h3>
+                    <p id="motions-status" class="text-lg font-semibold text-gray-600">No</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h3 class="font-medium text-gray-700">Playground Ready</h3>
+                    <p id="playground-status" class="text-lg font-semibold text-gray-600">No</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Control Panel</h2>
+
+            <!-- Motion Generation -->
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-4">1. Generate Reference Motions</h3>
+                <div class="flex items-center space-x-4">
+                    <input type="number" id="num-motions" value="100" min="1" max="1000" 
+                           class="shadow border rounded py-2 px-3 text-gray-700 w-32">
+                    <button onclick="generateMotions()" 
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Generate Motions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Training -->
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-4">2. Training</h3>
+                <div class="space-y-4">
+                    {% if duck_type == 'open_duck_mini_v2' %}
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="use-imitation-reward" class="form-checkbox h-4 w-4 text-blue-600">
+                            <span class="ml-2">Use Imitation Reward</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <label class="text-gray-700">Number of Environments:</label>
+                        <input type="number" id="num-envs" value="4096" min="1" max="8192" 
+                               class="shadow border rounded py-2 px-3 text-gray-700 w-32">
+                    </div>
+                    {% endif %}
+                    <button onclick="startTraining()" 
+                            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Start Training
+                    </button>
+                </div>
+            </div>
+
+            <!-- Trained Models -->
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-4">3. Trained Models</h3>
+                <div class="space-y-4">
+                    {% if trained_models %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for model in trained_models %}
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">{{ model.name }}</span>
+                                <span class="text-sm text-gray-500">{{ model.date|datetime if model.date else 'Unknown date' }}</span>
+                            </div>
+                            <div class="mt-2 space-x-2">
+                                <button onclick="runInference('{{ model.path }}')" 
+                                        class="bg-purple-500 hover:bg-purple-700 text-white text-sm font-bold py-1 px-3 rounded focus:outline-none focus:shadow-outline">
+                                    Run Inference
+                                </button>
+                                <button onclick="viewPlayground('{{ model.path }}')" 
+                                        class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded focus:outline-none focus:shadow-outline">
+                                    View in Playground
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500">No trained models available yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Panel -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-4">Log Output</h2>
+            <div id="log-output" class="bg-gray-900 text-gray-100 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Status update function
+        function updateStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('training-status').textContent = data.training_running ? 'Running' : 'Not Running';
+                    document.getElementById('training-status').className = `text-lg font-semibold ${data.training_running ? 'text-green-600' : 'text-red-600'}`;
+                    document.getElementById('motions-status').textContent = data.generated_motions ? 'Yes' : 'No';
+                    document.getElementById('motions-status').className = `text-lg font-semibold ${data.generated_motions ? 'text-green-600' : 'text-red-600'}`;
+                    document.getElementById('playground-status').textContent = data.playground_ready ? 'Yes' : 'No';
+                    document.getElementById('playground-status').className = `text-lg font-semibold ${data.playground_ready ? 'text-green-600' : 'text-red-600'}`;
+                });
+        }
+
+        // Log function
+        function log(message) {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.innerHTML += `<div class="text-gray-400">[${timestamp}] ${message}</div>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // Generate motions
+        function generateMotions() {
+            const numMotions = document.getElementById('num-motions').value;
+            
+            log(`Starting motion generation for {{ duck_type }}...`);
+            
+            fetch('/generate_motions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    duck_type: '{{ duck_type }}',
+                    num_motions: parseInt(numMotions)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ Motions generated successfully!');
+                } else {
+                    log(`❌ Error: ${data.error}`);
+                }
+                updateStatus();
+            });
+        }
+
+        // Start training
+        function startTraining() {
+            const trainingOptions = {};
+            
+            {% if duck_type == 'open_duck_mini_v2' %}
+            trainingOptions.use_imitation_reward = document.getElementById('use-imitation-reward').checked;
+            trainingOptions.num_envs = parseInt(document.getElementById('num-envs').value);
+            {% endif %}
+            
+            log(`Starting training for {{ duck_type }}...`);
+            
+            fetch('/train', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    duck_type: '{{ duck_type }}',
+                    training_options: trainingOptions
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ Training started successfully!');
+                } else {
+                    log(`❌ Error: ${data.error}`);
+                }
+                updateStatus();
+            });
+        }
+
+        // Run inference
+        function runInference(modelPath) {
+            log(`Starting inference for {{ duck_type }} with model ${modelPath}...`);
+            
+            fetch('/infer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    duck_type: '{{ duck_type }}',
+                    model_path: modelPath
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ Inference completed successfully!');
+                } else {
+                    log(`❌ Error: ${data.error}`);
+                }
+            });
+        }
+
+        // View playground
+        function viewPlayground(modelPath) {
+            window.location.href = `/view_playground/{{ duck_type }}?model=${encodeURIComponent(modelPath)}`;
+        }
+
+        // Update status every 5 seconds
+        setInterval(updateStatus, 5000);
+        updateStatus();
+    </script>
+</body>
+</html> 
