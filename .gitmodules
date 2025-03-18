@@ -1,0 +1,12 @@
+[submodule "submodules/open_duck_mini"]
+	path = submodules/open_duck_mini
+	url = https://github.com/apirrone/Open_Duck_Mini.git
+[submodule "submodules/awd"]
+	path = submodules/awd
+	url = https://github.com/rimim/AWD.git
+[submodule "submodules/open_duck_playground"]
+	path = submodules/open_duck_playground
+	url = https://github.com/apirrone/Open_Duck_Playground.git
+[submodule "submodules/open_duck_reference_motion_generator"]
+	path = submodules/open_duck_reference_motion_generator
+	url = https://github.com/apirrone/Open_Duck_reference_motion_generator.git
