@@ -16,11 +16,11 @@ graph TD
     D --> H[Development & Testing Environment]
     E --> I[Motion Planning & Reference Generation]
     
-    style A fill:#f9f,stroke:#333,stroke-width:4px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style C fill:#bbf,stroke:#333,stroke-width:2px
-    style D fill:#bbf,stroke:#333,stroke-width:2px
-    style E fill:#bbf,stroke:#333,stroke-width:2px
+    style A stroke:#333,stroke-width:4px
+    style B stroke:#333,stroke-width:2px
+    style C stroke:#333,stroke-width:2px
+    style D stroke:#333,stroke-width:2px
+    style E stroke:#333,stroke-width:2px
 ```
 
 ## Project Components
@@ -48,11 +48,15 @@ graph TD
    ./setup.sh
    ```
 
-4. Launch the playground:
+4. Launch the page:
    ```bash
-   cd submodules/open_duck_playground
-   python launch_playground.py
+   python app.py
    ```
+
+### Webpage preview
+![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/images/main_page.png "Logo Title Text 1")
+![alt text](https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts/images/training_page.png "Logo Title Text 1")
+
 
 ## Development
 
@@ -82,4 +86,4 @@ Behold-Urwar-Droid-Concepts/
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Apache 2.0
