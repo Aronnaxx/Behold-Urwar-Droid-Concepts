@@ -56,24 +56,41 @@ uv run scripts/auto_waddle.py --duck open_duck_mini_v2 --num 1 --output_dir ../m
 uv run scripts/fit_poly.py --ref_motion ../motion_data/motion_0.json
 ```
 
-3. **Train Policy**
+3. **Choose Training Framework**
+
+Option A: AWD Training Framework
 ```bash
+# Train using AWD (Isaac Gym-based)
 cd ../awd
 python awd/run.py --task DucklingCommand --num_envs 8 \
     --cfg_env awd/data/cfg/open_duck_mini_v2/duckling_command.yaml \
     --cfg_train awd/data/cfg/open_duck_mini_v2/train/amp_duckling_task.yaml \
     --motion_file ../motion_data/motion_0.json
+
+# Export trained model
+python export.py --checkpoint runs/latest/model.pt --output ../../trained_models/awd_policy.onnx
+```
+
+Option B: Open Duck Playground Training
+```bash
+# Train using Open Duck Playground (MuJoCo-based)
+cd ../open_duck_playground
+uv run playground/train.py \
+    --motion ../motion_data/motion_0.json \
+    --output ../../trained_models/playground_policy.onnx \
+    --num_envs 8 \
+    --training_steps 1000000
 ```
 
 4. **Test and Deploy**
 ```bash
-# Test in playground
+# Test in playground (for either AWD or Playground trained models)
 cd ../open_duck_playground
-uv run playground/open_duck_mini_v2/mujoco_infer.py -o ../../trained_models/policy.onnx
+uv run playground/open_duck_mini_v2/mujoco_infer.py -o ../../trained_models/[model_name].onnx
 
 # Deploy to robot
 cd ../open_duck_mini
-python deploy.py --model ../../trained_models/policy.onnx --target raspberrypi.local
+python deploy.py --model ../../trained_models/[model_name].onnx --target raspberrypi.local
 ```
 
 ## Submodule Overview
@@ -91,10 +108,13 @@ python deploy.py --model ../../trained_models/policy.onnx --target raspberrypi.l
 - Key Feature: Uses Isaac Gym for physics simulation
 
 ### 3. Open Duck Playground
-**Purpose**: Tests and validates trained models
-- Input: ONNX policy models
-- Output: Performance metrics and visualizations
-- Key Feature: MuJoCo-based testing environment
+**Purpose**: Provides both training and testing capabilities
+- Input: Reference motion JSON files (for training) or ONNX policy models (for testing)
+- Output: Trained ONNX models or performance metrics/visualizations
+- Key Features: 
+  - MuJoCo-based physics simulation for training
+  - Comprehensive testing environment
+  - Visualization tools for motion validation
 
 ### 4. Open Duck Mini
 **Purpose**: Physical robot implementation
@@ -106,12 +126,16 @@ python deploy.py --model ../../trained_models/policy.onnx --target raspberrypi.l
 
 ```mermaid
 flowchart LR
-    A["Reference Motion Generator"] -- "motion.json" --> B["AWD Training"]
-    B -- "policy.onnx" --> C["Playground Testing"]
+    A["Reference Motion Generator"] -- "motion.json" --> B1["AWD Training"]
+    A -- "motion.json" --> B2["Playground Training"]
+    B1 -- "policy.onnx" --> C["Playground Testing"]
+    B2 -- "policy.onnx" --> C
     C -- "validated_policy.onnx" --> D["Robot Deployment"]
+    C -- "feedback" --> A
 
     style A fill:#f9f,stroke:#000000,stroke-width:2px,color:#000000
-    style B fill:#bbf,stroke:#000000,stroke-width:2px,color:#000000
+    style B1 fill:#bbf,stroke:#000000,stroke-width:2px,color:#000000
+    style B2 fill:#bbf,stroke:#000000,stroke-width:2px,color:#000000
     style C fill:#bfb,stroke:#000000,stroke-width:2px,color:#000000
     style D fill:#fbb,stroke:#000000,stroke-width:2px,color:#000000
 ```
@@ -139,9 +163,12 @@ flowchart LR
 ## Common Integration Points
 
 1. **Motion Generation → Training**
-   - Motion files must match AWD's expected format
-   - Joint names must be consistent
+   - Motion files must match both AWD and Playground expected formats
+   - Joint names must be consistent across both frameworks
    - Timing must be properly synchronized
+   - Choose training framework based on needs:
+     - AWD: Better for adversarial training, requires GPU
+     - Playground: Simpler setup, MuJoCo-based physics
 
 2. **Training → Playground**
    - ONNX model must match playground's input/output specs
