@@ -50,10 +50,10 @@ pip install -r requirements.txt
 ```bash
 # Generate motion
 cd submodules/open_duck_reference_motion_generator
-uv run scripts/auto_waddle.py --duck open_duck_mini_v2 --num 1 --output_dir ../motion_data
+uv run scripts/auto_waddle.py --duck open_duck_mini_v2 --num 1 --output_dir ../../motion_data
 
 # Fit polynomials
-uv run scripts/fit_poly.py --ref_motion ../motion_data/motion_0.json
+uv run scripts/fit_poly.py --ref_motion ../../motion_data/motion_0.json
 ```
 
 3. **Choose Training Framework**
@@ -65,7 +65,7 @@ cd ../awd
 python awd/run.py --task DucklingCommand --num_envs 8 \
     --cfg_env awd/data/cfg/open_duck_mini_v2/duckling_command.yaml \
     --cfg_train awd/data/cfg/open_duck_mini_v2/train/amp_duckling_task.yaml \
-    --motion_file ../motion_data/motion_0.json
+    --motion_file ../../motion_data/motion_0.json
 
 # Export trained model
 python export.py --checkpoint runs/latest/model.pt --output ../../trained_models/awd_policy.onnx
@@ -76,7 +76,7 @@ Option B: Open Duck Playground Training
 # Train using Open Duck Playground (MuJoCo-based)
 cd ../open_duck_playground
 uv run playground/train.py \
-    --motion ../motion_data/motion_0.json \
+    --motion .././motion_data/motion_0.json \
     --output ../../trained_models/playground_policy.onnx \
     --num_envs 8 \
     --training_steps 1000000
