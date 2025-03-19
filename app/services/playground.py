@@ -1,6 +1,12 @@
 from ..utils.command import run_background_process
 from ..config import PLAYGROUND_DIR
 
+# This is going to be where you can load the duck droid models and scenes
+# and then use the keyboard to control the duck droid 
+# You can also then save the motions as reference motion
+# to create and train custom emotes for the droid easily
+
+
 class PlaygroundService:
     def __init__(self):
         self.process = None
