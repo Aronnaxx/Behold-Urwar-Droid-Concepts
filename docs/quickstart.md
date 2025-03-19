@@ -105,15 +105,15 @@ python deploy.py --model ../../trained_models/policy.onnx --target raspberrypi.l
 ## Data Flow Between Submodules
 
 ```mermaid
-graph LR
-    A[Reference Motion Generator] -->|motion.json| B[AWD Training]
-    B -->|policy.onnx| C[Playground Testing]
-    C -->|validated_policy.onnx| D[Robot Deployment]
-    
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style C fill:#bfb,stroke:#333,stroke-width:2px
-    style D fill:#fbb,stroke:#333,stroke-width:2px
+flowchart LR
+    A["Reference Motion Generator"] -- "motion.json" --> B["AWD Training"]
+    B -- "policy.onnx" --> C["Playground Testing"]
+    C -- "validated_policy.onnx" --> D["Robot Deployment"]
+
+    style A fill:#f9f,stroke:#000000,stroke-width:2px,color:#000000
+    style B fill:#bbf,stroke:#000000,stroke-width:2px,color:#000000
+    style C fill:#bfb,stroke:#000000,stroke-width:2px,color:#000000
+    style D fill:#fbb,stroke:#000000,stroke-width:2px,color:#000000
 ```
 
 ## File Format Specifications
