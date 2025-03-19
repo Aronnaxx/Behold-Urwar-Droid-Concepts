@@ -42,19 +42,32 @@ cd BUDC
 # Initialize submodules
 git submodule update --init --recursive
 
-# Install dependencies
-pip install -r requirements.txt
 ```
 
 2. **Generate Reference Motion**
 ```bash
 # Generate motion
 cd submodules/open_duck_reference_motion_generator
-uv run scripts/auto_waddle.py --duck open_duck_mini_v2 --num 1 --output_dir ../../motion_data
 
-# Fit polynomials
-uv run scripts/fit_poly.py --ref_motion ../../motion_data/motion_0.json
+# Create venv and motion data
+uv run --active scripts/auto_waddle.py --duck open_duck_mini_v2 --num 50 --output_dir ../../motion_data
 ```
+
+3. **Fit polynomials**
+```bash
+
+# Generate the polynomial_coefficients.pkl
+uv run --active scripts/fit_poly.py --ref_motion ../../motion_data/50*.json
+
+# Copy it to the motion_data directory (TODO: allow output dir for file option)
+cp polynomial_coefficients.pkl ../../motion_data
+
+cp polynomial_coefficients.pkl ../open_duck_playground/playground/open_duck_mini_v2/data/
+
+# Plot coefficients
+uv run --active scripts/plot_poly_fit.py --coefficients ../../motion_data/polynomial_coefficients.pkl
+```
+
 
 3. **Choose Training Framework**
 
@@ -65,7 +78,7 @@ cd ../awd
 python awd/run.py --task DucklingCommand --num_envs 8 \
     --cfg_env awd/data/cfg/open_duck_mini_v2/duckling_command.yaml \
     --cfg_train awd/data/cfg/open_duck_mini_v2/train/amp_duckling_task.yaml \
-    --motion_file ../../motion_data/motion_0.json
+    --motion_file ../../motion_data/*.json
 
 # Export trained model
 python export.py --checkpoint runs/latest/model.pt --output ../../trained_models/awd_policy.onnx
@@ -75,11 +88,8 @@ Option B: Open Duck Playground Training
 ```bash
 # Train using Open Duck Playground (MuJoCo-based)
 cd ../open_duck_playground
-uv run playground/train.py \
-    --motion .././motion_data/motion_0.json \
-    --output ../../trained_models/playground_policy.onnx \
-    --num_envs 8 \
-    --training_steps 1000000
+uv run --active playground/open_duck_mini_v2/runner.py \
+    --output ../../trained_models/playground_policy.onnx
 ```
 
 4. **Test and Deploy**

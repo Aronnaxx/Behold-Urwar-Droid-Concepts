@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 .tmp/*
 checkpoints/*
+motion_data/*
