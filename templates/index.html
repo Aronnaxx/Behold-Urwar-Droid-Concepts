@@ -71,7 +71,26 @@
                                         camera-orbit="45deg 65deg 2m"
                                         min-camera-orbit="auto auto auto"
                                         max-camera-orbit="auto auto auto"
-                                        camera-target="0 1 0"
+                                        camera-target="0m 0m 0m"
+                                        field-of-view="30deg"
+                                        environment-image="neutral"
+                                        shadow-intensity="1"
+                                        exposure="1"
+                                        bounds="tight"
+                                        disable-zoom
+                                        alt="{{ name }} visualization">
+                                    </model-viewer>
+                                    {% elif type == 'bdx' %}
+                                    <model-viewer 
+                                        src="/static/models/{{ type }}.glb"
+                                        camera-controls
+                                        auto-rotate
+                                        auto-rotate-delay="0"
+                                        rotation-per-second="30deg"
+                                        camera-orbit="45deg 65deg 1.5m"
+                                        min-camera-orbit="auto auto auto"
+                                        max-camera-orbit="auto auto auto"
+                                        camera-target="0m 0.4m 0m"
                                         field-of-view="30deg"
                                         environment-image="neutral"
                                         shadow-intensity="1"
