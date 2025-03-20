@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from ..services.motion import generate_motions
-from ..services.training import start_training
+from ..services.training import training_service
 from ..config import DUCK_TYPES
 
 training = Blueprint('training', __name__)
@@ -15,11 +15,11 @@ def generate_motions_route():
     if duck_type not in DUCK_TYPES:
         return jsonify({'success': False, 'error': 'Invalid duck type'})
     
-    success, error = generate_motions(duck_type, num_motions)
-    if not success:
-        return jsonify({'success': False, 'error': error})
-    
-    return jsonify({'success': True})
+    try:
+        result = generate_motions(duck_type, num_motions)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @training.route('/train', methods=['POST'])
 def train_route():
@@ -31,8 +31,8 @@ def train_route():
     if duck_type not in DUCK_TYPES:
         return jsonify({'success': False, 'error': 'Invalid duck type'})
     
-    success, result = start_training(duck_type, training_options)
+    success, result = training_service.start_training(duck_type, training_options)
     if not success:
         return jsonify({'success': False, 'error': result})
     
-    return jsonify({'success': True, 'pid': result}) 
+    return jsonify({'success': True, 'task_id': result}) 

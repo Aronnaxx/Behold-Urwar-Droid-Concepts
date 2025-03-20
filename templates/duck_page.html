@@ -1,168 +1,450 @@
 {% extends "base.html" %}
 
-{% block title %}{{ duck.name }} - Duck Details{% endblock %}
+{% block title %}{{ duck.name }} - BUDC{% endblock %}
 
 {% block extra_css %}
 <style>
+    .tab-content {
+        padding: 20px;
+        background-color: var(--bs-dark);
+        border: 1px solid var(--bs-gray-700);
+        border-radius: 0.25rem;
+        margin-top: 1rem;
+    }
+    .nav-tabs {
+        border-bottom: 1px solid var(--bs-gray-700);
+    }
+    .nav-tabs .nav-link {
+        color: var(--bs-gray-300);
+        border: none;
+        border-bottom: 2px solid transparent;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--bs-gray-100);
+        border: none;
+        border-bottom: 2px solid var(--bs-gray-600);
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--bs-primary);
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid var(--bs-primary);
+    }
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-label {
+        color: var(--bs-gray-300);
+    }
+    .form-control {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-gray-700);
+        color: var(--bs-gray-100);
+    }
+    .form-control:focus {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-primary);
+        color: var(--bs-gray-100);
+    }
     .model-viewer {
         width: 100%;
         height: 400px;
-        background-color: #f8f9fa;
+        background-color: var(--bs-gray-900);
+        border-radius: 0.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .workflow-step {
+        background-color: var(--bs-gray-800);
         border-radius: 0.5rem;
-        overflow: hidden;
-        position: relative;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--bs-gray-700);
     }
-    .model-viewer model-viewer {
-        width: 100%;
-        height: 100%;
-        --poster-color: transparent;
-        --progress-bar-color: #007bff;
-        --progress-bar-height: 2px;
+    .workflow-step.completed {
+        border-color: var(--bs-success);
     }
-    .model-viewer-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        color: #6c757d;
+    .workflow-step.active {
+        border-color: var(--bs-primary);
     }
-    .model-viewer-placeholder i {
-        font-size: 3rem;
+    .workflow-step h3 {
+        color: var(--bs-primary);
         margin-bottom: 1rem;
     }
-    .spec-card {
-        transition: transform 0.2s;
+    .workflow-step .step-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--bs-primary);
+        margin-right: 0.5rem;
     }
-    .spec-card:hover {
-        transform: translateY(-5px);
+    .workflow-step .step-status {
+        float: right;
+        color: var(--bs-success);
     }
-    .feature-list {
-        list-style: none;
-        padding-left: 0;
+    .workflow-step .step-status.pending {
+        color: var(--bs-gray-500);
     }
-    .feature-list li {
+    .workflow-step .step-status.error {
+        color: var(--bs-danger);
+    }
+    .preview-section {
+        display: none;
+        margin-top: 1rem;
+    }
+    .preview-section canvas {
+        width: 100%;
+        height: 200px;
+        background-color: var(--bs-gray-900);
+        border-radius: 0.25rem;
+    }
+    .log-output {
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: var(--bs-gray-900);
+        padding: 1rem;
+        border-radius: 0.25rem;
+        font-family: monospace;
+    }
+    .log-entry {
         margin-bottom: 0.5rem;
-        padding-left: 1.5rem;
-        position: relative;
     }
-    .feature-list li:before {
-        content: "•";
-        color: #007bff;
-        position: absolute;
-        left: 0;
+    .log-entry.success {
+        color: var(--bs-success);
+    }
+    .log-entry.error {
+        color: var(--bs-danger);
+    }
+    .log-timestamp {
+        color: var(--bs-gray-500);
+        margin-right: 0.5rem;
+    }
+    .duck-specs {
+        background-color: var(--bs-gray-800);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .duck-specs h3 {
+        color: var(--bs-primary);
+        margin-bottom: 1rem;
+    }
+    .duck-specs .spec-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--bs-gray-700);
+    }
+    .duck-specs .spec-item:last-child {
+        border-bottom: none;
+    }
+    .duck-specs .spec-label {
+        color: var(--bs-gray-300);
+    }
+    .duck-specs .spec-value {
+        color: var(--bs-primary);
+        font-weight: bold;
+    }
+    .advanced-options {
+        display: none;
+    }
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .file-status {
+        font-size: 0.9rem;
+        color: var(--bs-gray-500);
+        margin-top: 0.5rem;
+    }
+    .file-status.available {
+        color: var(--bs-success);
+    }
+    .file-status.missing {
+        color: var(--bs-danger);
+    }
+    .playground-frame-container,
+    .playground-frame-container.fullscreen,
+    .playground-controls,
+    #playground-frame {
+        display: none;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12 mb-4">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ duck.name }}</li>
-            </ol>
-        </nav>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ duck.name }}</li>
+                </ol>
+            </nav>
+        </div>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-body">
-                <h1 class="card-title">{{ duck.name }}</h1>
-                <div class="model-viewer mb-4">
-                    {% if duck.type == 'open_duck_mini_v2' %}
-                    <model-viewer 
-                        src="{{ duck.model_path }}"
-                        camera-controls
-                        auto-rotate
-                        auto-rotate-delay="0"
-                        rotation-per-second="30deg"
-                        camera-orbit="45deg 65deg 2m"
-                        min-camera-orbit="auto auto auto"
-                        max-camera-orbit="auto auto auto"
-                        camera-target="0 1 0"
-                        field-of-view="30deg"
-                        environment-image="neutral"
-                        shadow-intensity="1"
-                        exposure="1"
-                        bounds="tight"
-                        alt="{{ duck.name }} visualization">
-                    </model-viewer>
-                    {% elif duck.type == 'bdx' %}
-                    <model-viewer 
-                        src="{{ duck.model_path }}"
-                        camera-controls
-                        auto-rotate
-                        auto-rotate-delay="0"
-                        rotation-per-second="30deg"
-                        camera-orbit="45deg 65deg 2m"
-                        min-camera-orbit="auto auto auto"
-                        max-camera-orbit="auto auto auto"
-                        camera-target="0 0 0"
-                        field-of-view="30deg"
-                        environment-image="neutral"
-                        shadow-intensity="1"
-                        exposure="1"
-                        bounds="tight"
-                        alt="{{ duck.name }} visualization">
-                    </model-viewer>
-                    {% else %}
-                    <div class="model-viewer-placeholder">
-                        <i class="fas fa-robot"></i>
-                        <p>3D Model Coming Soon</p>
-                    </div>
-                    {% endif %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="duck-specs">
+                <h3>{{ duck.name }}</h3>
+                <p>{{ duck.description }}</p>
+                
+                <model-viewer
+                    src="{{ duck.model_path }}"
+                    alt="{{ duck.name }} 3D Model"
+                    auto-rotate
+                    camera-controls
+                    shadow-intensity="1"
+                    class="model-viewer">
+                </model-viewer>
+                
+                <div class="spec-item">
+                    <span class="spec-label">Height</span>
+                    <span class="spec-value">1.2m</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Weight</span>
+                    <span class="spec-value">5kg</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Battery Life</span>
+                    <span class="spec-value">4 hours</span>
                 </div>
                 
-                <div class="mb-4">
-                    <h2>Description</h2>
-                    <p>{{ duck.description }}</p>
-                </div>
-
-                <div class="mb-4">
-                    <h2>Features</h2>
-                    <ul class="feature-list">
-                        {% for feature in duck.features %}
-                        <li>{{ feature }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
+                <h3 class="mt-4">Features</h3>
+                <ul class="list-unstyled">
+                    {% for feature in duck.features %}
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        {{ feature }}
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
-    </div>
+        
+        <div class="col-md-8">
+            <div class="workflow-step active" id="step1">
+                <h3><span class="step-number">1</span> Generate Reference Motion</h3>
+                <div class="step-status pending">Pending</div>
+                
+                <form id="motion-form">
+                    <div class="form-group">
+                        <label for="mode-select" class="form-label">Mode</label>
+                        <select class="form-control" id="mode-select" name="mode">
+                            <option value="auto">Auto Waddle</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+                    </div>
 
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2>Specifications</h2>
-                {% for spec in duck.specifications %}
-                <div class="card spec-card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ spec.title }}</h5>
-                        <p class="card-text">{{ spec.value }}</p>
+                    <div id="auto-mode-options">
+                        <div class="form-group">
+                            <label for="generation-type" class="form-label">Generation Type</label>
+                            <select class="form-control" id="generation-type" name="generation_type">
+                                <option value="single">Single Motion</option>
+                                <option value="sweep">Parameter Sweep</option>
+                                <option value="random">Random Motions</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="advanced-options" class="advanced-options" style="display: none;">
+                        <div class="form-group">
+                            <label for="motion-type" class="form-label">Motion Type</label>
+                            <select class="form-control" id="motion-type" name="motion_type">
+                                <option value="walk">Walking</option>
+                                <option value="run">Running</option>
+                                <option value="jump">Jumping</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="duration" class="form-label">Duration (seconds)</label>
+                            <input type="number" class="form-control" id="duration" name="duration" value="5" step="0.1">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="speed" class="form-label">Speed (m/s)</label>
+                            <input type="number" class="form-control" id="speed" name="speed" value="0.5" step="0.1">
+                        </div>
+
+                        <h4 class="mt-3">Gait Customization</h4>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dx_max" class="form-label">Maximum Forward Speed (dx_max)</label>
+                            <input type="number" class="form-control" id="dx_max" name="dx_max" value="0.05" step="0.01" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum forward velocity of the center of mass (m/s)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dy_max" class="form-label">Maximum Lateral Speed (dy_max)</label>
+                            <input type="number" class="form-control" id="dy_max" name="dy_max" value="0.05" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum lateral velocity of the center of mass (m/s)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dtheta_max" class="form-label">Maximum Rotation Speed (dtheta_max)</label>
+                            <input type="number" class="form-control" id="dtheta_max" name="dtheta_max" value="0.25" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum angular velocity of the body (rad/s)">
+                            <div class="invalid-feedback">Value must be between 0.1 and 0.5 rad/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_com_height" class="form-label">COM Height During Walk</label>
+                            <input type="number" class="form-control" id="walk_com_height" name="walk_com_height" value="0.2" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Height of the center of mass during walking (m)">
+                            <div class="invalid-feedback">Value must be between 0.1 and 0.3 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_foot_height" class="form-label">Foot Height During Walk</label>
+                            <input type="number" class="form-control" id="walk_foot_height" name="walk_foot_height" value="0.05" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Height of the foot during the swing phase (m)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_trunk_pitch" class="form-label">Trunk Pitch During Walk</label>
+                            <input type="number" class="form-control" id="walk_trunk_pitch" name="walk_trunk_pitch" value="0.0" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Pitch angle of the trunk during walking (rad)">
+                            <div class="invalid-feedback">Value must be between -0.2 and 0.2 rad</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_foot_rise_ratio" class="form-label">Foot Rise Ratio</label>
+                            <input type="number" class="form-control" id="walk_foot_rise_ratio" name="walk_foot_rise_ratio" value="0.5" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Ratio of the swing phase duration to the total step duration">
+                            <div class="invalid-feedback">Value must be between 0.3 and 0.7</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="single_support_duration" class="form-label">Single Support Duration</label>
+                            <input type="number" class="form-control" id="single_support_duration" name="single_support_duration" value="0.5" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Duration of the single support phase (s)">
+                            <div class="invalid-feedback">Value must be between 0.3 and 0.7 s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="feet_spacing" class="form-label">Feet Spacing</label>
+                            <input type="number" class="form-control" id="feet_spacing" name="feet_spacing" value="0.1" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Distance between the feet during walking (m)">
+                            <div class="invalid-feedback">Value must be between 0.05 and 0.2 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="zmp_margin" class="form-label">ZMP Margin</label>
+                            <input type="number" class="form-control" id="zmp_margin" name="zmp_margin" value="0.02" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Margin for the Zero Moment Point (m)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.05 m</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Generate Motion</button>
+                        <button type="button" id="launch-playground" class="btn btn-info">
+                            <i class="fas fa-play"></i> Launch Playground
+                        </button>
+                    </div>
+                    <div class="file-status" id="motion-file-status">
+                        <i class="fas fa-spinner fa-spin"></i> Checking motion files...
+                    </div>
+                </form>
+
+                <div class="preview-section">
+                    <h3>Motion Preview</h3>
+                    <canvas id="motion-preview"></canvas>
+                    <div class="d-flex gap-2 mt-2">
+                        <button id="download-motion" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download Motion
+                        </button>
+                        <button id="fit-polynomials" class="btn btn-warning">
+                            <i class="fas fa-chart-line"></i> Plot Polynomials
+                        </button>
+                        <button id="replay-motion" class="btn btn-info">
+                            <i class="fas fa-play"></i> Replay Motion
+                        </button>
                     </div>
                 </div>
-                {% endfor %}
+
+                <div class="mt-4">
+                    <h3>Generation Progress</h3>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="log-output mt-3"></div>
+                </div>
             </div>
-        </div>
 
-        <div class="card">
-            <div class="card-body">
-                <h2>Related Resources</h2>
-                {% for resource in duck.resources %}
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ resource.title }}</h5>
-                        <p class="card-text">{{ resource.description }}</p>
-                        <a href="{{ resource.url }}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-external-link-alt"></i> Learn More
-                        </a>
+            <div class="workflow-step" id="step2">
+                <h3><span class="step-number">2</span> Train Policy</h3>
+                <div class="step-status pending">Pending</div>
+                
+                <form id="training-config-form">
+                    <div class="form-group">
+                        <label for="model-type" class="form-label">Model Type</label>
+                        <select class="form-control" id="model-type" name="model_type">
+                            <option value="ppo">PPO</option>
+                            <option value="sac">SAC</option>
+                            <option value="td3">TD3</option>
+                        </select>
                     </div>
+                    
+                    <div class="form-group">
+                        <label for="num-steps" class="form-label">Number of Steps</label>
+                        <input type="number" class="form-control" id="num-steps" name="num_steps" value="1000000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="learning-rate" class="form-label">Learning Rate</label>
+                        <input type="number" class="form-control" id="learning-rate" name="learning_rate" value="0.0003" step="0.0001">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Start Training</button>
+                    <div class="file-status" id="training-file-status">
+                        <i class="fas fa-spinner fa-spin"></i> Checking training files...
+                    </div>
+                </form>
+                
+                <div class="mt-4">
+                    <h3>Training Progress</h3>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="log-output mt-3"></div>
                 </div>
-                {% endfor %}
+            </div>
+
+            <div class="workflow-step" id="step3">
+                <h3><span class="step-number">3</span> Test in Playground</h3>
+                <div class="step-status pending">Pending</div>
+                
+                <form id="testing-config-form">
+                    <div class="form-group">
+                        <label for="test-episodes" class="form-label">Number of Episodes</label>
+                        <input type="number" class="form-control" id="test-episodes" name="test_episodes" value="10">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="test-model" class="form-label">Model to Test</label>
+                        <select class="form-control" id="test-model" name="test_model">
+                            <option value="latest">Latest Model</option>
+                            <option value="best">Best Model</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Start Testing</button>
+                    <div class="file-status" id="testing-file-status">
+                        <i class="fas fa-spinner fa-spin"></i> Checking testing files...
+                    </div>
+                </form>
+                
+                <div class="mt-4">
+                    <h3>Test Results</h3>
+                    <div class="results-container"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -170,5 +452,405 @@
 {% endblock %}
 
 {% block extra_js %}
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
+<script src="{{ url_for('static', filename='js/reference_motions.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const motionForm = document.getElementById('motion-form');
+    const trainingForm = document.getElementById('training-config-form');
+    const testingForm = document.getElementById('testing-config-form');
+    const progressBars = document.querySelectorAll('.progress-bar');
+    const logOutputs = document.querySelectorAll('.log-output');
+    const resultsContainer = document.querySelector('.results-container');
+    const modeSelect = document.getElementById('mode-select');
+    const autoModeOptions = document.getElementById('auto-mode-options');
+    const advancedOptions = document.getElementById('advanced-options');
+    const motionFileStatus = document.getElementById('motion-file-status');
+    const trainingFileStatus = document.getElementById('training-file-status');
+    const testingFileStatus = document.getElementById('testing-file-status');
+
+    // Check file availability on page load
+    checkFileAvailability();
+
+    // Handle mode selection
+    modeSelect.addEventListener('change', function() {
+        const isAdvanced = this.value === 'advanced';
+        autoModeOptions.style.display = isAdvanced ? 'none' : 'block';
+        advancedOptions.style.display = isAdvanced ? 'block' : 'none';
+        
+        // Show/hide gait customization fields
+        const gaitCustomizationFields = document.querySelectorAll('.gait-customization');
+        gaitCustomizationFields.forEach(field => {
+            field.style.display = isAdvanced ? 'block' : 'none';
+        });
+    });
+
+    // Initial state
+    autoModeOptions.style.display = 'block';
+    advancedOptions.style.display = 'none';
+
+    async function checkFileAvailability() {
+        try {
+            // Check motion files
+            const motionResponse = await fetch('/open_duck_mini/check_motion_files');
+            const motionData = await motionResponse.json();
+            updateFileStatus(motionFileStatus, motionData.available);
+            
+            // Check training files
+            const trainingResponse = await fetch('/open_duck_mini/check_training_files');
+            const trainingData = await trainingResponse.json();
+            updateFileStatus(trainingFileStatus, trainingData.available);
+            
+            // Check testing files
+            const testingResponse = await fetch('/open_duck_mini/check_testing_files');
+            const testingData = await testingResponse.json();
+            updateFileStatus(testingFileStatus, testingData.available);
+
+            // Update button states
+            updateButtonStates();
+        } catch (error) {
+            console.error('Error checking file availability:', error);
+        }
+    }
+
+    function updateFileStatus(element, available) {
+        element.innerHTML = available 
+            ? '<i class="fas fa-check"></i> Required files available'
+            : '<i class="fas fa-times"></i> Required files missing';
+        element.className = `file-status ${available ? 'available' : 'missing'}`;
+    }
+
+    function updateButtonStates() {
+        const trainingButton = trainingForm.querySelector('button');
+        const testingButton = testingForm.querySelector('button');
+        
+        trainingButton.disabled = !trainingFileStatus.classList.contains('available');
+        testingButton.disabled = !testingFileStatus.classList.contains('available');
+    }
+
+    function addLogEntry(message, type = 'info', step = 1) {
+        const logOutput = logOutputs[step - 1];
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.innerHTML = `
+            <span class="log-timestamp">[${new Date().toLocaleTimeString()}]</span>
+            <span class="log-message">${message}</span>
+        `;
+        logOutput.appendChild(entry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    function updateStepStatus(step, status) {
+        const stepElement = document.getElementById(`step${step}`);
+        const statusElement = stepElement.querySelector('.step-status');
+        
+        stepElement.classList.remove('active', 'completed');
+        statusElement.className = 'step-status';
+        
+        switch(status) {
+            case 'completed':
+                stepElement.classList.add('completed');
+                statusElement.classList.add('completed');
+                statusElement.innerHTML = '<i class="fas fa-check"></i> Completed';
+                break;
+            case 'active':
+                stepElement.classList.add('active');
+                statusElement.classList.add('active');
+                statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> In Progress';
+                break;
+            case 'error':
+                statusElement.classList.add('error');
+                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                break;
+            default:
+                statusElement.classList.add('pending');
+                statusElement.innerHTML = 'Pending';
+        }
+    }
+
+    motionForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        progressBars[0].style.width = '0%';
+        logOutputs[0].innerHTML = '';
+        updateStepStatus(1, 'active');
+        
+        try {
+            const formData = new FormData(motionForm);
+            const response = await fetch('/open_duck_mini/generate_motion', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                addLogEntry('Motion generated successfully', 'success', 1);
+                updateStepStatus(1, 'completed');
+                updateStepStatus(2, 'active');
+                
+                // Show preview section
+                document.querySelector('.preview-section').style.display = 'block';
+                
+                // Enable training form
+                trainingForm.querySelector('button').disabled = false;
+                
+                // If we have motion data, store it for preview
+                if (data.motion_data) {
+                    window.currentMotionData = data.motion_data;
+                }
+            } else {
+                const errorMessage = data.error || 'Unknown error occurred';
+                addLogEntry(`Motion generation failed: ${errorMessage}`, 'error', 1);
+                updateStepStatus(1, 'error');
+                
+                // Log any command output for debugging
+                if (data.output) {
+                    addLogEntry(`Command output: ${data.output}`, 'info', 1);
+                }
+                if (data.error) {
+                    addLogEntry(`Error output: ${data.error}`, 'error', 1);
+                }
+            }
+        } catch (error) {
+            addLogEntry(`Error: ${error.message}`, 'error', 1);
+            updateStepStatus(1, 'error');
+        }
+    });
+
+    trainingForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        progressBars[1].style.width = '0%';
+        logOutputs[1].innerHTML = '';
+        updateStepStatus(2, 'active');
+        
+        try {
+            const formData = new FormData(trainingForm);
+            const response = await fetch('/open_duck_mini/start_training', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                addLogEntry('Training started successfully', 'success', 2);
+                // Start progress polling
+                pollTrainingProgress(data.task_id);
+            } else {
+                addLogEntry(`Training failed: ${data.error}`, 'error', 2);
+                updateStepStatus(2, 'error');
+            }
+        } catch (error) {
+            addLogEntry(`Error: ${error.message}`, 'error', 2);
+            updateStepStatus(2, 'error');
+        }
+    });
+
+    testingForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        resultsContainer.innerHTML = '';
+        updateStepStatus(3, 'active');
+        
+        try {
+            const formData = new FormData(testingForm);
+            const response = await fetch('/open_duck_mini/start_testing', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                resultsContainer.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4>Test Results</h4>
+                        <p>Average Reward: ${data.results.average_reward}</p>
+                        <p>Success Rate: ${data.results.success_rate}%</p>
+                    </div>
+                `;
+                updateStepStatus(3, 'completed');
+            } else {
+                resultsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        Testing failed: ${data.error}
+                    </div>
+                `;
+                updateStepStatus(3, 'error');
+            }
+        } catch (error) {
+            resultsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    Error: ${error.message}
+                </div>
+            `;
+            updateStepStatus(3, 'error');
+        }
+    });
+
+    async function pollTrainingProgress(taskId) {
+        try {
+            const response = await fetch(`/open_duck_mini/training_status/${taskId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                progressBars[1].style.width = `${data.status.progress || 0}%`;
+                addLogEntry(data.status.message || 'Training in progress...', 'info', 2);
+                
+                if (data.status.progress < 100) {
+                    setTimeout(() => pollTrainingProgress(taskId), 5000);
+                } else {
+                    addLogEntry('Training completed!', 'success', 2);
+                    updateStepStatus(2, 'completed');
+                    updateStepStatus(3, 'active');
+                    
+                    // Enable testing form
+                    testingForm.querySelector('button').disabled = false;
+                }
+            } else {
+                addLogEntry(`Error checking progress: ${data.error}`, 'error', 2);
+                updateStepStatus(2, 'error');
+            }
+        } catch (error) {
+            addLogEntry(`Error: ${error.message}`, 'error', 2);
+            updateStepStatus(2, 'error');
+        }
+    }
+
+    // Initially disable training and testing forms
+    trainingForm.querySelector('button').disabled = true;
+    testingForm.querySelector('button').disabled = true;
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Validation ranges
+    const validationRanges = {
+        dx_max: { min: 0.01, max: 0.1 },
+        dy_max: { min: 0.01, max: 0.1 },
+        dtheta_max: { min: 0.1, max: 0.5 },
+        walk_com_height: { min: 0.1, max: 0.3 },
+        walk_foot_height: { min: 0.01, max: 0.1 },
+        walk_trunk_pitch: { min: -0.2, max: 0.2 },
+        walk_foot_rise_ratio: { min: 0.3, max: 0.7 },
+        single_support_duration: { min: 0.3, max: 0.7 },
+        feet_spacing: { min: 0.05, max: 0.2 },
+        zmp_margin: { min: 0.01, max: 0.05 }
+    };
+
+    // Validate input fields
+    function validateInput(input) {
+        const field = input.id;
+        const value = parseFloat(input.value);
+        const range = validationRanges[field];
+        
+        if (range && (value < range.min || value > range.max)) {
+            input.classList.add('is-invalid');
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            return true;
+        }
+    }
+
+    // Add validation listeners to all gait customization fields
+    document.querySelectorAll('.gait-customization input').forEach(input => {
+        input.addEventListener('input', () => validateInput(input));
+    });
+
+    // Handle polynomial fitting
+    document.getElementById('fit-polynomials').addEventListener('click', async function() {
+        try {
+            const response = await fetch('/open_duck_mini/fit_polynomials', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                addLogEntry('Polynomials fitted successfully', 'success', 1);
+                // Show plot if available
+                if (data.plot_url) {
+                    window.open(data.plot_url, '_blank');
+                }
+            } else {
+                addLogEntry(`Polynomial fitting failed: ${data.error}`, 'error', 1);
+            }
+        } catch (error) {
+            addLogEntry(`Error: ${error.message}`, 'error', 1);
+        }
+    });
+
+    // Handle motion replay
+    document.getElementById('replay-motion').addEventListener('click', async function() {
+        try {
+            const response = await fetch('/open_duck_mini/replay_motion', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                addLogEntry('Motion replay started', 'success', 1);
+                // Open visualization in new window if available
+                if (data.visualization_url) {
+                    window.open(data.visualization_url, '_blank');
+                }
+            } else {
+                addLogEntry(`Motion replay failed: ${data.error}`, 'error', 1);
+            }
+        } catch (error) {
+            addLogEntry(`Error: ${error.message}`, 'error', 1);
+        }
+    });
+
+    // Playground handling
+    const playgroundContainer = document.getElementById('playground-container');
+    const launchPlaygroundBtn = document.getElementById('launch-playground');
+    let playgroundRunning = false;
+
+    launchPlaygroundBtn.addEventListener('click', async function() {
+        try {
+            if (!playgroundRunning) {
+                // Launch playground
+                const response = await fetch('/open_duck_mini/launch_playground', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    playgroundRunning = true;
+                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Playground';
+                    launchPlaygroundBtn.classList.remove('btn-info');
+                    launchPlaygroundBtn.classList.add('btn-danger');
+                    addLogEntry('Playground launched successfully', 'success', 1);
+                } else {
+                    addLogEntry(`Failed to launch playground: ${data.error}`, 'error', 1);
+                }
+            } else {
+                // Stop playground
+                const response = await fetch('/open_duck_mini/close_playground', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    playgroundRunning = false;
+                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-play"></i> Launch Playground';
+                    launchPlaygroundBtn.classList.remove('btn-danger');
+                    launchPlaygroundBtn.classList.add('btn-info');
+                    addLogEntry('Playground closed', 'success', 1);
+                } else {
+                    addLogEntry(`Failed to close playground: ${data.error}`, 'error', 1);
+                }
+            }
+        } catch (error) {
+            addLogEntry(`Error managing playground: ${error.message}`, 'error', 1);
+        }
+    });
+});
+</script>
 {% endblock %} 

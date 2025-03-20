@@ -1,5 +1,6 @@
 from flask import Flask
 from pathlib import Path
+from datetime import datetime
 from .routes.main import main
 from .routes.duck import duck
 from .routes.training import training

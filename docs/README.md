@@ -187,10 +187,6 @@ def training_results():
     return render_template('training_results.html', files=files)
 ```
 
-### Educational Content
-
-Add an `/education` route and page with explanations of how each submodule ties into the system, along with relevant robotics/controls knowledge.
-
 ---
 
 ## End-to-End Policy Creation & Deployment
@@ -235,18 +231,6 @@ training:
   epochs: 10
   learning_rate: 0.001
 ```
-
-### Automated Setup
-
-Create a script or Makefile that runs:
-```bash
-git submodule update --init --recursive
-pip install -r requirements.txt
-```
-
-### Continuous Integration
-
-(Optional) Use GitHub Actions or similar to run tests and check submodules for consistent integration.
 
 ---
 
