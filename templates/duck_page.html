@@ -162,6 +162,12 @@
     .file-status.missing {
         color: var(--bs-danger);
     }
+    .playground-frame-container,
+    .playground-frame-container.fullscreen,
+    .playground-controls,
+    #playground-frame {
+        display: none;
+    }
 </style>
 {% endblock %}
 
@@ -355,7 +361,7 @@
                             <i class="fas fa-download"></i> Download Motion
                         </button>
                         <button id="fit-polynomials" class="btn btn-warning">
-                            <i class="fas fa-chart-line"></i> Fit Polynomials
+                            <i class="fas fa-chart-line"></i> Plot Polynomials
                         </button>
                         <button id="replay-motion" class="btn btn-info">
                             <i class="fas fa-play"></i> Replay Motion
@@ -438,6 +444,19 @@
                 <div class="mt-4">
                     <h3>Test Results</h3>
                     <div class="results-container"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4" id="playground-container">
+            <div class="workflow-step">
+                <h3><i class="fas fa-gamepad"></i> Playground</h3>
+                <div class="d-flex justify-content-end mb-2">
+                    <button id="launch-playground" class="btn btn-info">
+                        <i class="fas fa-play"></i> Launch Playground
+                    </button>
+                </div>
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle"></i> The playground will open in a new window.
                 </div>
             </div>
         </div>
@@ -801,21 +820,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Validate form before submission
-    motionForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Validate all gait customization fields
-        const isValid = Array.from(document.querySelectorAll('.gait-customization input'))
-            .map(input => validateInput(input))
-            .every(valid => valid);
-            
-        if (!isValid) {
-            addLogEntry('Please correct the validation errors before submitting', 'error', 1);
-            return;
+    // Playground handling
+    const playgroundContainer = document.getElementById('playground-container');
+    const launchPlaygroundBtn = document.getElementById('launch-playground');
+    let playgroundRunning = false;
+
+    launchPlaygroundBtn.addEventListener('click', async function() {
+        try {
+            if (!playgroundRunning) {
+                // Launch playground
+                const response = await fetch('/open_duck_mini/launch_playground', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    playgroundRunning = true;
+                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Playground';
+                    launchPlaygroundBtn.classList.remove('btn-info');
+                    launchPlaygroundBtn.classList.add('btn-danger');
+                    addLogEntry('Playground launched successfully', 'success', 1);
+                } else {
+                    addLogEntry(`Failed to launch playground: ${data.error}`, 'error', 1);
+                }
+            } else {
+                // Stop playground
+                const response = await fetch('/open_duck_mini/close_playground', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    playgroundRunning = false;
+                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-play"></i> Launch Playground';
+                    launchPlaygroundBtn.classList.remove('btn-danger');
+                    launchPlaygroundBtn.classList.add('btn-info');
+                    addLogEntry('Playground closed', 'success', 1);
+                } else {
+                    addLogEntry(`Failed to close playground: ${data.error}`, 'error', 1);
+                }
+            }
+        } catch (error) {
+            addLogEntry(`Error managing playground: ${error.message}`, 'error', 1);
         }
-        
-        // Rest of the existing form submission code...
     });
 });
 </script>

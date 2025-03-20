@@ -9,9 +9,15 @@ from ..services.training import training_service
 import glob
 import shutil
 import time
+import matplotlib.pyplot as plt
+import numpy as np
+import sys
 
 # Create blueprint with URL prefix
 open_duck_mini = Blueprint('open_duck_mini', __name__, url_prefix='/open_duck_mini')
+
+# Global variable to store the playground process
+_playground_process = None
 
 def run_command(command, cwd):
     """
@@ -167,7 +173,7 @@ def generate_motion():
                     log_output.extend(stderr.split('\n'))
             
             # Wait a bit and check for motion files in the temp directory
-            max_wait = 10  # Maximum wait time in seconds
+            max_wait = 30  # Maximum wait time in seconds
             wait_interval = 0.5  # Check every half second
             waited = 0
             
@@ -183,7 +189,7 @@ def generate_motion():
             if not motion_files:
                 return jsonify({
                     'success': False,
-                    'error': 'No motion files were generated after waiting',
+                    'error': 'No motion files were generated after waiting 30s',
                     'output': '\n'.join(log_output)
                 })
             
@@ -451,52 +457,86 @@ def launch_playground():
     """
     Endpoint to launch the gait playground for visualization.
     """
+    global _playground_process
     try:
-        # Get duck type from request
-        duck_type = request.form.get('duck_type', 'open_duck_mini_v2')
-        
-        # Set the working directory to the submodule
-        submodule_dir = str(Path(__file__).parent.parent.parent / 'submodules/open_duck_reference_motion_generator')
-        
-        # Launch the gait playground
-        cmd = ['uv', 'run', '--active', 'open_duck_reference_motion_generator/gait_playground.py', '--duck', duck_type]
-        stdout, stderr = run_command(cmd, cwd=submodule_dir)
-        
-        if stderr:
+        # If playground is already running, return success
+        if _playground_process is not None and _playground_process.poll() is None:
             return jsonify({
-                'success': False,
-                'error': stderr,
-                'output': stdout
+                'success': True,
+                'message': 'Playground is already running'
             })
+
+        repo_root = Path(os.getcwd())
+        submodule_path = repo_root / 'submodules/open_duck_reference_motion_generator'
             
+        # Set working directory to submodule
+        os.chdir(submodule_path)
+        
+        # Launch the playground directly
+        cmd = [sys.executable, 'open_duck_reference_motion_generator/gait_playground.py', '--duck', 'open_duck_mini_v2']
+        _playground_process = subprocess.Popen(cmd, env=os.environ.copy())
+        
+        # Wait briefly to ensure process started
+        time.sleep(1)
+        
         return jsonify({
             'success': True,
-            'output': stdout
+            'message': 'Playground launched successfully'
         })
+        
     except Exception as e:
         return jsonify({
             'success': False,
             'error': f'Failed to launch playground: {str(e)}'
         })
 
+@open_duck_mini.route('/close_playground', methods=['POST'])
+def close_playground():
+    """
+    Endpoint to close the gait playground.
+    """
+    global _playground_process
+    try:
+        if _playground_process is not None:
+            # Try to terminate gracefully
+            _playground_process.terminate()
+            try:
+                # Wait for up to 5 seconds for process to terminate
+                _playground_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # If process doesn't terminate, force kill it
+                _playground_process.kill()
+                _playground_process.wait()
+            
+            _playground_process = None
+            
+        return jsonify({
+            'success': True,
+            'message': 'Playground closed successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @open_duck_mini.route('/fit_polynomials', methods=['POST'])
 def fit_polynomials():
     try:
-        # Get the latest generated motion file
+        # Get the latest generated motion files from the latest symlink
         repo_root = Path(__file__).parent.parent.parent
-        motion_dir = repo_root / 'generated_motions'
-        motion_files = list(motion_dir.glob('*.json'))
+        latest_dir = repo_root / 'generated_motions/latest'
         
+        if not latest_dir.exists() or not latest_dir.is_symlink():
+            return jsonify({'success': False, 'error': 'No recent motion generation found'})
+            
+        motion_files = list(latest_dir.glob('*.json'))
         if not motion_files:
-            return jsonify({'success': False, 'error': 'No motion files found'})
-        
-        latest_motion = max(motion_files, key=lambda p: p.stat().st_mtime)
+            return jsonify({'success': False, 'error': 'No motion files found in latest run'})
         
         # Run the polynomial fitting script
         submodule_dir = repo_root / 'submodules/open_duck_reference_motion_generator'
         cmd = [
             'uv', 'run', '--active', 'scripts/fit_poly.py',
-            '--ref_motion', str(latest_motion)
+            '--ref_motion', str(motion_files[0])  # Use the first motion file
         ]
         
         stdout, stderr = run_command(cmd, cwd=str(submodule_dir))
@@ -534,21 +574,22 @@ def fit_polynomials():
 @open_duck_mini.route('/replay_motion', methods=['POST'])
 def replay_motion():
     try:
-        # Get the latest generated motion file
+        # Get the latest generated motion files from the latest symlink
         repo_root = Path(__file__).parent.parent.parent
-        motion_dir = repo_root / 'generated_motions'
-        motion_files = list(motion_dir.glob('*.json'))
+        latest_dir = repo_root / 'generated_motions/latest'
         
+        if not latest_dir.exists() or not latest_dir.is_symlink():
+            return jsonify({'success': False, 'error': 'No recent motion generation found'})
+            
+        motion_files = list(latest_dir.glob('*.json'))
         if not motion_files:
-            return jsonify({'success': False, 'error': 'No motion files found'})
-        
-        latest_motion = max(motion_files, key=lambda p: p.stat().st_mtime)
+            return jsonify({'success': False, 'error': 'No motion files found in latest run'})
         
         # Run the replay script
         submodule_dir = repo_root / 'submodules/open_duck_reference_motion_generator'
         cmd = [
             'uv', 'run', '--active', 'scripts/replay_motion.py',
-            '-f', str(latest_motion)
+            '-f', str(motion_files[0])  # Use the first motion file
         ]
         
         # Start the replay process in the background
@@ -557,6 +598,57 @@ def replay_motion():
         return jsonify({
             'success': True,
             'message': 'Motion replay started'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@open_duck_mini.route('/plot_polynomials', methods=['POST'])
+def plot_polynomials():
+    try:
+        repo_root = Path(os.getcwd())
+        latest_dir = repo_root / 'generated_motions/latest'
+        
+        if not latest_dir.exists() or not latest_dir.is_symlink():
+            return jsonify({'success': False, 'error': 'No recent motion generation found'})
+            
+        # Find polynomial files
+        poly_files = list(latest_dir.glob('*.poly'))
+        if not poly_files:
+            return jsonify({'success': False, 'error': 'No polynomial files found'})
+            
+        # Create plots directory if it doesn't exist
+        plots_dir = repo_root / 'static/plots'
+        plots_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create a new figure
+        plt.figure(figsize=(12, 8))
+        
+        # Plot each polynomial file
+        for poly_file in poly_files:
+            joint_name = poly_file.stem
+            coeffs = np.loadtxt(poly_file)
+            
+            # Generate x values for plotting (0 to 1)
+            x = np.linspace(0, 1, 100)
+            y = np.polyval(coeffs[::-1], x)
+            
+            plt.plot(x, y, label=joint_name)
+        
+        plt.title('Joint Trajectories')
+        plt.xlabel('Normalized Time')
+        plt.ylabel('Joint Angle (rad)')
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.grid(True)
+        
+        # Save plot
+        plot_path = plots_dir / 'trajectories.png'
+        plt.savefig(plot_path, bbox_inches='tight')
+        plt.close()
+        
+        return jsonify({
+            'success': True,
+            'plot_url': '/static/plots/trajectories.png'
         })
         
     except Exception as e:
