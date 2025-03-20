@@ -10,6 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadButton = document.getElementById('download-motion');
     let currentMotionData = null;
 
+    // Get the current duck type from the URL
+    function getCurrentDuckType() {
+        const path = window.location.pathname;
+        if (path.includes('/go_bdx')) return 'go_bdx';
+        if (path.includes('/open_duck_mini_v2')) return 'open_duck_mini_v2';
+        return 'open_duck_mini_v2'; // default
+    }
+
     // Initialize UI state
     function initializeUI() {
         // Show/hide parameters based on generation type
@@ -37,7 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Submit form data
             const formData = new FormData(form);
-            const response = await fetch('/open_duck_mini/generate_motion', {
+            const duckType = getCurrentDuckType();
+            const response = await fetch(`/${duckType}/generate_motion`, {
                 method: 'POST',
                 body: formData
             });
@@ -67,25 +76,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle motion download
     downloadButton.addEventListener('click', async function() {
-        if (!currentMotionData) return;
-        
         try {
-            const response = await fetch('/open_duck_mini/download_motion', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(currentMotionData)
+            const duckType = getCurrentDuckType();
+            const response = await fetch(`/${duckType}/download_motion`, {
+                method: 'POST'
             });
             
-            if (!response.ok) throw new Error('Download failed');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Download failed');
+            }
             
             // Create download link
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `motion_${new Date().toISOString().slice(0,19).replace(/:/g, '')}.json`;
+            a.download = `motion_${duckType}_${new Date().toISOString().slice(0,19).replace(/:/g, '')}.json`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -99,10 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function addLogEntry(message, type = '') {
         const entry = document.createElement('div');
         entry.className = `log-entry ${type}`;
-        entry.innerHTML = `
-            <span class="log-timestamp">[${new Date().toLocaleTimeString()}]</span>
-            <span class="log-message">${message}</span>
-        `;
+        entry.textContent = message;
         logOutput.appendChild(entry);
         logOutput.scrollTop = logOutput.scrollHeight;
     }
@@ -152,6 +156,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialize UI when page loads
+    // Initialize the UI
     initializeUI();
 }); 

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from ..utils.command import run_command
-from ..config import PLAYGROUND_DIR, OUTPUT_DIR, DUCK_TYPES
+from ..config import PLAYGROUND_DIR, OUTPUT_DIR, DUCK_TYPES, REFERENCE_MOTION_DIR
 
 class MotionService:
     def __init__(self):
@@ -32,7 +32,7 @@ class MotionService:
                 
             # Generate motion based on type
             if motion_params.get('type') == 'walk':
-                self._generate_walking_motion(motion_dir, motion_params)
+                self._generate_walking_motion(motion_dir, motion_params, duck_type)
             else:
                 raise ValueError(f"Unsupported motion type: {motion_params.get('type')}")
                 
@@ -42,7 +42,7 @@ class MotionService:
             print(f"Error generating motion: {str(e)}")
             return None
             
-    def _generate_walking_motion(self, motion_dir, params):
+    def _generate_walking_motion(self, motion_dir, params, duck_type):
         """Generate a walking motion using the specified parameters."""
         try:
             # Import required modules
@@ -67,6 +67,13 @@ class MotionService:
             motion_file = motion_dir / 'motion.json'
             with open(motion_file, 'w') as f:
                 json.dump(motion_data, f, indent=2)
+                
+            # Copy to playground data directory
+            playground_data_dir = REFERENCE_MOTION_DIR(duck_type)
+            playground_data_dir.mkdir(parents=True, exist_ok=True)
+            
+            import shutil
+            shutil.copy2(motion_file, playground_data_dir / "motion.json")
                 
         except Exception as e:
             print(f"Error generating walking motion: {str(e)}")
