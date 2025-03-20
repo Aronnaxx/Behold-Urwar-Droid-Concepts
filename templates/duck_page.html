@@ -488,9 +488,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Enable training form
                 trainingForm.querySelector('button').disabled = false;
+                
+                // If we have motion data, store it for preview
+                if (data.motion_data) {
+                    window.currentMotionData = data.motion_data;
+                }
             } else {
-                addLogEntry(`Motion generation failed: ${data.error}`, 'error', 1);
+                const errorMessage = data.error || 'Unknown error occurred';
+                addLogEntry(`Motion generation failed: ${errorMessage}`, 'error', 1);
                 updateStepStatus(1, 'error');
+                
+                // Log any command output for debugging
+                if (data.output) {
+                    addLogEntry(`Command output: ${data.output}`, 'info', 1);
+                }
+                if (data.error) {
+                    addLogEntry(`Error output: ${data.error}`, 'error', 1);
+                }
             }
         } catch (error) {
             addLogEntry(`Error: ${error.message}`, 'error', 1);

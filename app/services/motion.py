@@ -31,10 +31,10 @@ class MotionService:
                 json.dump(motion_params, f, indent=2)
                 
             # Generate motion based on type
-            if motion_params['type'] == 'walk':
+            if motion_params.get('type') == 'walk':
                 self._generate_walking_motion(motion_dir, motion_params)
             else:
-                raise ValueError(f"Unsupported motion type: {motion_params['type']}")
+                raise ValueError(f"Unsupported motion type: {motion_params.get('type')}")
                 
             return motion_id
             
@@ -48,11 +48,16 @@ class MotionService:
             # Import required modules
             from submodules.open_duck_reference_motion_generator.reference_motion_generator import PolyReferenceMotion
             
+            # Get parameters with defaults
+            speed = float(params.get('speed', 0.5))
+            duration = float(params.get('duration', 5.0))
+            stride_length = float(params.get('stride_length', 0.1))  # Default stride length
+            
             # Create motion generator
             motion_generator = PolyReferenceMotion(
-                speed=params['speed'],
-                duration=params['duration'],
-                stride_length=params['stride_length']
+                speed=speed,
+                duration=duration,
+                stride_length=stride_length
             )
             
             # Generate motion data
@@ -201,7 +206,10 @@ def generate_motions(duck_type, num_motions=100):
         dict: Result containing success status, motion file path, and message
     """
     return motion_service.generate_motion(duck_type, {
-        'motion_type': 'walk',
+        'type': 'walk',
+        'speed': 0.5,
+        'duration': 5.0,
+        'stride_length': 0.1,
         'num_motions': num_motions
     })
 

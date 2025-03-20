@@ -95,10 +95,24 @@ def generate_motion():
                 num_motions = request.form.get('num_motions', '10')
                 cmd.extend(['--num', num_motions])
             else:  # single motion
-                motion_type = request.form.get('motion_type')
+                # For single motion, we need to use the gait generator directly
+                cmd = ['uv', 'run', 'open_duck_reference_motion_generator/gait_generator.py']
+                cmd.extend(['--duck', 'open_duck_mini_v2'])
+                
+                # Add motion parameters
                 duration = request.form.get('duration', '5')
                 speed = request.form.get('speed', '0.5')
-                cmd.extend(['--motion', motion_type, '--duration', duration, '--speed', speed])
+                motion_type = request.form.get('motion_type', 'walk')
+                
+                # Convert speed to dx, dy, dtheta based on motion type
+                if motion_type == 'walk':
+                    cmd.extend(['--dx', speed, '--dy', '0', '--dtheta', '0'])
+                elif motion_type == 'run':
+                    cmd.extend(['--dx', str(float(speed) * 2), '--dy', '0', '--dtheta', '0'])
+                elif motion_type == 'jump':
+                    cmd.extend(['--dx', '0', '--dy', speed, '--dtheta', '0'])
+                
+                cmd.extend(['--length', duration])
         else:
             # Advanced Mode
             duck_type = request.form.get('duck_type', 'open_duck_mini_v2')
@@ -124,7 +138,7 @@ def generate_motion():
         cmd.extend(['--output_dir', output_dir])
         
         # Run command
-        stdout, stderr = run_command(cmd)
+        stdout, stderr = run_command(cmd, cwd=str(Path(__file__).parent.parent.parent))
         
         # Read generated motion data
         motion_file = os.path.join(output_dir, 'motion.json')
