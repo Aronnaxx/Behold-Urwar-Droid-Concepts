@@ -44,15 +44,16 @@ class TrainingService:
         # Build training command
         command = [
             "uv", "run", "playground/open_duck_mini_v2/runner.py",
-            "--output_dir", str(output_dir)
+            "--output_dir", str(output_dir),
+            "--model_type", training_options.get('model_type', 'ppo')
         ]
 
         # Add training options
         if training_options:
-            if training_options.get('num_envs'):
-                command.extend(["--num_envs", str(training_options['num_envs'])])
-            if training_options.get('total_timesteps'):
-                command.extend(["--total_timesteps", str(training_options['total_timesteps'])])
+            if training_options.get('num_steps'):
+                command.extend(["--total_timesteps", str(training_options['num_steps'])])
+            if training_options.get('learning_rate'):
+                command.extend(["--learning_rate", str(training_options['learning_rate'])])
 
         # Start training process
         process = run_background_process(command, cwd=self.playground_dir)
@@ -72,18 +73,22 @@ class TrainingService:
         if not options:
             return True
 
-        if options.get('num_envs'):
+        if options.get('model_type'):
+            if options['model_type'] not in ['ppo', 'sac', 'td3']:
+                return False
+
+        if options.get('num_steps'):
             try:
-                num = int(options['num_envs'])
-                if not 1 <= num <= 128:
+                steps = int(options['num_steps'])
+                if not 1000000 <= steps <= 1000000000:
                     return False
             except ValueError:
                 return False
 
-        if options.get('total_timesteps'):
+        if options.get('learning_rate'):
             try:
-                steps = int(options['total_timesteps'])
-                if not 1000000 <= steps <= 1000000000:
+                lr = float(options['learning_rate'])
+                if not 0.00001 <= lr <= 0.1:
                     return False
             except ValueError:
                 return False

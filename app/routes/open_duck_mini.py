@@ -27,16 +27,6 @@ def run_command(command, cwd):
     except Exception as e:
         return "", str(e)
 
-@open_duck_mini.route('/')
-def open_duck_mini_page():
-    """Render the Open Duck Mini page."""
-    return render_template('open_duck_mini.html')
-
-@open_duck_mini.route('/reference-motions')
-def reference_motions():
-    """Render the reference motion generation page."""
-    return render_template('reference_motions.html')
-
 @open_duck_mini.route('/check_status')
 def check_status():
     """
@@ -200,8 +190,12 @@ def start_training():
     Endpoint to start training for the Open Duck Mini.
     """
     try:
-        # Get training options from request
-        training_options = request.json or {}
+        # Get training options from form data
+        training_options = {
+            'model_type': request.form.get('model_type'),
+            'num_steps': request.form.get('num_steps'),
+            'learning_rate': request.form.get('learning_rate')
+        }
         
         # Start training
         success, result = training_service.start_training('open_duck_mini_v2', training_options)
@@ -246,4 +240,68 @@ def training_status(task_id):
         return jsonify({
             'success': False,
             'error': f'Failed to get training status: {str(e)}'
+        }), 500
+
+@open_duck_mini.route('/start_testing', methods=['POST'])
+def start_testing():
+    """
+    Endpoint to start testing for the Open Duck Mini.
+    """
+    try:
+        # Get testing options from request
+        testing_options = request.form.to_dict()
+        
+        # Build testing command
+        cmd = ['uv', 'run', 'scripts/test_model.py']
+        cmd.extend(['--duck', 'open_duck_mini_v2'])
+        
+        if testing_options.get('test_episodes'):
+            cmd.extend(['--episodes', testing_options['test_episodes']])
+        
+        if testing_options.get('test_model'):
+            cmd.extend(['--model', testing_options['test_model']])
+        
+        # Run command
+        stdout, stderr = run_command(cmd)
+        
+        # Parse results from stdout
+        results = {
+            'average_reward': 0.0,
+            'success_rate': 0.0
+        }
+        
+        # Try to extract results from stdout
+        for line in stdout.split('\n'):
+            if 'Average Reward:' in line:
+                try:
+                    results['average_reward'] = float(line.split(':')[1].strip())
+                except (ValueError, IndexError):
+                    pass
+            elif 'Success Rate:' in line:
+                try:
+                    results['success_rate'] = float(line.split(':')[1].strip().rstrip('%'))
+                except (ValueError, IndexError):
+                    pass
+        
+        # If we got any errors, include them in the response
+        if stderr:
+            return jsonify({
+                'success': True,
+                'results': results,
+                'output': stdout,
+                'error': stderr,
+                'warning': 'Some errors occurred during testing'
+            })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'output': stdout
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Testing failed: {str(e)}',
+            'details': str(e.__class__.__name__)
         }), 500 
