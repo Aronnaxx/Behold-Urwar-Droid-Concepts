@@ -1,107 +1,101 @@
-# Behold Urwar Droid Concepts
+# Behold-Urwar-Droid-Concepts
 
-A centralized repository for Duck Droid projects and related tools.
+A web interface for training and testing duck droid models using reinforcement learning.
 
-## Repository Structure
+## Features
 
-```mermaid
-graph TD
-    A[Behold Urwar Droid Concepts] --> B[Open Duck Mini]
-    A --> C[AWD]
-    A --> D[Open Duck Playground]
-    A --> E[Open Duck Reference Motion Generator]
-    
-    B --> F[Core Duck Droid Implementation]
-    C --> G[Advanced Walking Dynamics]
-    D --> H[Development & Testing Environment]
-    E --> I[Motion Planning & Reference Generation]
-    
-    style A stroke:#333,stroke-width:4px
-    style B stroke:#333,stroke-width:2px
-    style C stroke:#333,stroke-width:2px
-    style D stroke:#333,stroke-width:2px
-    style E stroke:#333,stroke-width:2px
+- Generate reference motions using Placo
+- Train policies using imitation learning
+- Test trained models in a playground environment
+- Export models to ONNX format
+- Visualize results in 3D
+
+## Prerequisites
+
+- Python 3.8 or higher
+- Git
+- CUDA-capable GPU (recommended for training)
+
+## Quick Start
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/Behold-Urwar-Droid-Concepts.git
+cd Behold-Urwar-Droid-Concepts
 ```
 
-## Project Components
+2. Run the setup script:
+```bash
+chmod +x setup.sh
+./setup.sh
+```
 
-- **Open Duck Mini**: Core implementation of the Duck Droid
-- **AWD**: Advanced Walking Dynamics implementation
-- **Open Duck Playground**: Development and testing environment
-- **Open Duck Reference Motion Generator**: Tools for motion planning and reference generation
+3. Activate the virtual environment:
+```bash
+source .venv/bin/activate
+```
+
+4. Start the web interface:
+```bash
+python app.py
+```
+
+5. Open your browser and navigate to:
+```
+http://localhost:5000
+```
 
 ## Project Structure
 
 ```
-Behold-Urwar-Droid-Concepts/
-├── app/                    # Main application package
-│   ├── routes/            # Route handlers
+.
+├── app/                    # Core application code
+│   ├── routes/            # Flask routes
 │   ├── services/          # Business logic
-│   ├── utils/             # Utility functions
-│   └── config.py          # Configuration
+│   ├── static/           # Static assets
+│   └── templates/        # HTML templates
 ├── docs/                  # Documentation
-│   └── learning/          # Learning center content
-├── submodules/            # Git submodules
-│   ├── open_duck_mini/    # Core Duck Droid implementation
-│   ├── awd/               # Advanced Walking Dynamics
-│   ├── open_duck_playground/  # Development environment
-│   └── open_duck_reference_motion_generator/  # Motion planning tools
-├── static/                # Static assets
-├── templates/             # HTML templates
-└── scripts/              # Utility scripts
+├── generated_motions/     # Storage for generated motions
+├── static/               # Global static assets
+├── submodules/           # Git submodules
+│   ├── open_duck_mini/   # Duck model definitions
+│   ├── open_duck_playground/  # Training environment
+│   └── open_duck_reference_motion_generator/  # Motion generation
+├── templates/            # Global templates
+├── trained_models/       # Storage for trained models
+├── .env                  # Environment configuration
+├── app.py               # Main Flask application
+├── pyproject.toml       # Python package configuration
+└── setup.sh            # Setup automation script
 ```
-
-## Quick Start
-
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/Behold-Urwar-Droid-Concepts.git
-   cd Behold-Urwar-Droid-Concepts
-   ```
-
-2. Initialize and update submodules:
-   ```bash
-   git submodule update --init --recursive
-   ```
-
-3. Run the setup script:
-   ```bash
-   ./setup.sh
-   ```
-
-4. Launch the application:
-   ```bash
-   python app.py
-   ```
-## Learning Center
-
-The project includes a comprehensive learning center with documentation for each component:
-
-- [Motion Generation](docs/learning/motion_generation/README.md)
-- [Training Process](docs/learning/training/README.md)
-- [Mujoco Playground](docs/learning/playground/README.md)
-- [Advanced Walking Dynamics](docs/learning/awd/README.md)
 
 ## Development
 
-Each component is maintained as a git submodule, allowing for independent development while keeping everything organized in one place.
+### Installing Development Dependencies
 
-### Adding New Features
+```bash
+uv pip install -e ".[dev]"
+```
 
-1. Create a new branch for your feature
-2. Make changes in the appropriate submodule
-3. Update the main application if needed
-4. Add documentation in the learning center
-5. Create a pull request
+### Running Tests
 
-## Contributing
+```bash
+pytest
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+### Code Style
+
+This project uses:
+- Black for code formatting
+- isort for import sorting
+- flake8 for linting
+
+Run the formatters:
+```bash
+black .
+isort .
+```
 
 ## License
 
-Apache 2.0
+MIT License - see LICENSE file for details

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}BUDC Workflow{% endblock %}
+
+{% block content %}
+<div class="workflow-container">
+    <div class="workflow-header">
+        <h1>BUDC End-to-End Workflow</h1>
+        <p class="lead">Follow these steps to generate, train, and test your duck model</p>
+    </div>
+
+    <!-- Step 1: Motion Generation -->
+    <div class="workflow-step" id="step1">
+        <div class="step-header">
+            <h2>Step 1: Generate Reference Motion</h2>
+            <div class="step-status" id="step1-status"></div>
+        </div>
+        
+        <div class="step-content">
+            <form id="motion-form" class="workflow-form">
+                <div class="form-group">
+                    <label for="duck-type">Duck Type</label>
+                    <select id="duck-type" name="duck_type" class="form-control" required>
+                        {% for type, name in duck_types.items() %}
+                        <option value="{{ type }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="motion-type">Motion Type</label>
+                    <select id="motion-type" name="motion_type" class="form-control" required>
+                        <option value="walk">Walking</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+
+                <div id="walk-params" class="motion-params">
+                    <div class="form-group">
+                        <label for="speed">Speed (m/s)</label>
+                        <input type="number" id="speed" name="speed" class="form-control"
+                               min="0.1" max="2.0" step="0.1" value="0.5">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="duration">Duration (s)</label>
+                        <input type="number" id="duration" name="duration" class="form-control"
+                               min="1" max="60" step="1" value="10">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="stride-length">Stride Length (m)</label>
+                        <input type="number" id="stride-length" name="stride_length" class="form-control"
+                               min="0.1" max="0.5" step="0.05" value="0.2">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Generate Motion</button>
+            </form>
+
+            <div id="motion-preview" class="preview-container">
+                <!-- Motion preview will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Training -->
+    <div class="workflow-step" id="step2">
+        <div class="step-header">
+            <h2>Step 2: Train Policy</h2>
+            <div class="step-status" id="step2-status"></div>
+        </div>
+        
+        <div class="step-content">
+            <form id="training-form" class="workflow-form">
+                <div class="form-group">
+                    <label for="reference-motion">Reference Motion</label>
+                    <select id="reference-motion" name="reference_motion" class="form-control" required>
+                        <!-- Will be populated with generated motions -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="epochs">Training Epochs</label>
+                    <input type="number" id="epochs" name="epochs" class="form-control"
+                           min="1" max="1000" step="1" value="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="batch-size">Batch Size</label>
+                    <input type="number" id="batch-size" name="batch_size" class="form-control"
+                           min="1" max="512" step="1" value="32">
+                </div>
+
+                <div class="form-group">
+                    <label for="learning-rate">Learning Rate</label>
+                    <input type="number" id="learning-rate" name="learning_rate" class="form-control"
+                           min="0.0001" max="0.1" step="0.0001" value="0.001">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Start Training</button>
+            </form>
+
+            <div id="training-progress" class="progress-container">
+                <!-- Training progress will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Testing -->
+    <div class="workflow-step" id="step3">
+        <div class="step-header">
+            <h2>Step 3: Test in Playground</h2>
+            <div class="step-status" id="step3-status"></div>
+        </div>
+        
+        <div class="step-content">
+            <form id="testing-form" class="workflow-form">
+                <div class="form-group">
+                    <label for="trained-model">Trained Model</label>
+                    <select id="trained-model" name="model_file" class="form-control" required>
+                        <!-- Will be populated with trained models -->
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Test in Playground</button>
+            </form>
+
+            <div id="playground-viewer" class="preview-container">
+                <!-- Playground viewer will be rendered here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/workflow.js') }}"></script>
+{% endblock %} 

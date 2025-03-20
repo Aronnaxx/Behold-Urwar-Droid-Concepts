@@ -1,10 +1,12 @@
 from flask import Flask
 from pathlib import Path
+from datetime import datetime
 from .routes.main import main
 from .routes.duck import duck
 from .routes.training import training
 from .routes.playground import playground
 from .routes.open_duck_mini import open_duck_mini
+from .routes.workflow import workflow
 from .config import OUTPUT_DIR, TRAINED_MODELS_DIR, DUCK_TYPES
 
 def create_app():
@@ -35,5 +37,6 @@ def create_app():
     app.register_blueprint(training)
     app.register_blueprint(playground)
     app.register_blueprint(open_duck_mini)
+    app.register_blueprint(workflow)
     
     return app 
