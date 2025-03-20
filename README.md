@@ -37,7 +37,7 @@ source .venv/bin/activate
 
 4. Start the web interface:
 ```bash
-python app.py
+uv run app.py
 ```
 
 5. Open your browser and navigate to:

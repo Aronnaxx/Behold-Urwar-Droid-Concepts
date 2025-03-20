@@ -22,14 +22,14 @@ class TrainingService:
         self.playground_dir = Path(__file__).parent.parent.parent / 'submodules' / 'open_duck_playground'
         self.tasks = {}
 
-    def train(self, duck_type, training_options=None):
+    def start_training(self, duck_type, training_options=None):
         """Start training for a specific duck type."""
         if duck_type not in DUCK_TYPES:
-            raise ValueError(f"Invalid duck type: {duck_type}")
+            return False, "Invalid duck type"
 
         # Validate training options
         if not self._validate_training_options(training_options):
-            raise ValueError("Invalid training options")
+            return False, "Invalid training options"
 
         # Create output directory
         output_dir = TRAINED_MODELS_DIR / duck_type
@@ -65,11 +65,7 @@ class TrainingService:
             'status': 'running'
         }
 
-        return {
-            'success': True,
-            'task_id': task_id,
-            'message': 'Training started successfully'
-        }
+        return True, task_id
 
     def _validate_training_options(self, options):
         """Validate training options."""
@@ -136,4 +132,7 @@ class TrainingService:
                     return progress.get('progress', 0)
             except:
                 pass
-        return 0 
+        return 0
+
+# Create a singleton instance
+training_service = TrainingService() 
