@@ -178,3 +178,6 @@ cython_debug/
 # uncomment these when ready
 # checkpoints/*
 # motion_data/*
+
+# Generated motions
+generated_motions/*
