@@ -232,16 +232,18 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="generation-type" class="form-label">Generation Type</label>
-                        <select class="form-control" id="generation-type" name="generation_type">
-                            <option value="single">Single Motion</option>
-                            <option value="sweep">Parameter Sweep</option>
-                            <option value="random">Random Motions</option>
-                        </select>
+                    <div id="auto-mode-options">
+                        <div class="form-group">
+                            <label for="generation-type" class="form-label">Generation Type</label>
+                            <select class="form-control" id="generation-type" name="generation_type">
+                                <option value="single">Single Motion</option>
+                                <option value="sweep">Parameter Sweep</option>
+                                <option value="random">Random Motions</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div id="advanced-options" class="advanced-options">
+                    <div id="advanced-options" class="advanced-options" style="display: none;">
                         <div class="form-group">
                             <label for="motion-type" class="form-label">Motion Type</label>
                             <select class="form-control" id="motion-type" name="motion_type">
@@ -260,9 +262,86 @@
                             <label for="speed" class="form-label">Speed (m/s)</label>
                             <input type="number" class="form-control" id="speed" name="speed" value="0.5" step="0.1">
                         </div>
+
+                        <h4 class="mt-3">Gait Customization</h4>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dx_max" class="form-label">Maximum Forward Speed (dx_max)</label>
+                            <input type="number" class="form-control" id="dx_max" name="dx_max" value="0.05" step="0.01" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum forward velocity of the center of mass (m/s)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dy_max" class="form-label">Maximum Lateral Speed (dy_max)</label>
+                            <input type="number" class="form-control" id="dy_max" name="dy_max" value="0.05" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum lateral velocity of the center of mass (m/s)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dtheta_max" class="form-label">Maximum Rotation Speed (dtheta_max)</label>
+                            <input type="number" class="form-control" id="dtheta_max" name="dtheta_max" value="0.25" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum angular velocity of the body (rad/s)">
+                            <div class="invalid-feedback">Value must be between 0.1 and 0.5 rad/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_com_height" class="form-label">COM Height During Walk</label>
+                            <input type="number" class="form-control" id="walk_com_height" name="walk_com_height" value="0.2" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Height of the center of mass during walking (m)">
+                            <div class="invalid-feedback">Value must be between 0.1 and 0.3 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_foot_height" class="form-label">Foot Height During Walk</label>
+                            <input type="number" class="form-control" id="walk_foot_height" name="walk_foot_height" value="0.05" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Height of the foot during the swing phase (m)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_trunk_pitch" class="form-label">Trunk Pitch During Walk</label>
+                            <input type="number" class="form-control" id="walk_trunk_pitch" name="walk_trunk_pitch" value="0.0" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Pitch angle of the trunk during walking (rad)">
+                            <div class="invalid-feedback">Value must be between -0.2 and 0.2 rad</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_foot_rise_ratio" class="form-label">Foot Rise Ratio</label>
+                            <input type="number" class="form-control" id="walk_foot_rise_ratio" name="walk_foot_rise_ratio" value="0.5" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Ratio of the swing phase duration to the total step duration">
+                            <div class="invalid-feedback">Value must be between 0.3 and 0.7</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="single_support_duration" class="form-label">Single Support Duration</label>
+                            <input type="number" class="form-control" id="single_support_duration" name="single_support_duration" value="0.5" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Duration of the single support phase (s)">
+                            <div class="invalid-feedback">Value must be between 0.3 and 0.7 s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="feet_spacing" class="form-label">Feet Spacing</label>
+                            <input type="number" class="form-control" id="feet_spacing" name="feet_spacing" value="0.1" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Distance between the feet during walking (m)">
+                            <div class="invalid-feedback">Value must be between 0.05 and 0.2 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="zmp_margin" class="form-label">ZMP Margin</label>
+                            <input type="number" class="form-control" id="zmp_margin" name="zmp_margin" value="0.02" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Margin for the Zero Moment Point (m)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.05 m</div>
+                        </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">Generate Motion</button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Generate Motion</button>
+                        <button type="button" id="launch-playground" class="btn btn-info">
+                            <i class="fas fa-play"></i> Launch Playground
+                        </button>
+                    </div>
                     <div class="file-status" id="motion-file-status">
                         <i class="fas fa-spinner fa-spin"></i> Checking motion files...
                     </div>
@@ -271,9 +350,17 @@
                 <div class="preview-section">
                     <h3>Motion Preview</h3>
                     <canvas id="motion-preview"></canvas>
-                    <button id="download-motion" class="btn btn-success mt-2">
-                        <i class="fas fa-download"></i> Download Motion
-                    </button>
+                    <div class="d-flex gap-2 mt-2">
+                        <button id="download-motion" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download Motion
+                        </button>
+                        <button id="fit-polynomials" class="btn btn-warning">
+                            <i class="fas fa-chart-line"></i> Fit Polynomials
+                        </button>
+                        <button id="replay-motion" class="btn btn-info">
+                            <i class="fas fa-play"></i> Replay Motion
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mt-4">
@@ -370,6 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const logOutputs = document.querySelectorAll('.log-output');
     const resultsContainer = document.querySelector('.results-container');
     const modeSelect = document.getElementById('mode-select');
+    const autoModeOptions = document.getElementById('auto-mode-options');
     const advancedOptions = document.getElementById('advanced-options');
     const motionFileStatus = document.getElementById('motion-file-status');
     const trainingFileStatus = document.getElementById('training-file-status');
@@ -380,8 +468,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle mode selection
     modeSelect.addEventListener('change', function() {
-        advancedOptions.style.display = this.value === 'advanced' ? 'block' : 'none';
+        const isAdvanced = this.value === 'advanced';
+        autoModeOptions.style.display = isAdvanced ? 'none' : 'block';
+        advancedOptions.style.display = isAdvanced ? 'block' : 'none';
+        
+        // Show/hide gait customization fields
+        const gaitCustomizationFields = document.querySelectorAll('.gait-customization');
+        gaitCustomizationFields.forEach(field => {
+            field.style.display = isAdvanced ? 'block' : 'none';
+        });
     });
+
+    // Initial state
+    autoModeOptions.style.display = 'block';
+    advancedOptions.style.display = 'none';
 
     async function checkFileAvailability() {
         try {
@@ -616,6 +716,107 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initially disable training and testing forms
     trainingForm.querySelector('button').disabled = true;
     testingForm.querySelector('button').disabled = true;
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Validation ranges
+    const validationRanges = {
+        dx_max: { min: 0.01, max: 0.1 },
+        dy_max: { min: 0.01, max: 0.1 },
+        dtheta_max: { min: 0.1, max: 0.5 },
+        walk_com_height: { min: 0.1, max: 0.3 },
+        walk_foot_height: { min: 0.01, max: 0.1 },
+        walk_trunk_pitch: { min: -0.2, max: 0.2 },
+        walk_foot_rise_ratio: { min: 0.3, max: 0.7 },
+        single_support_duration: { min: 0.3, max: 0.7 },
+        feet_spacing: { min: 0.05, max: 0.2 },
+        zmp_margin: { min: 0.01, max: 0.05 }
+    };
+
+    // Validate input fields
+    function validateInput(input) {
+        const field = input.id;
+        const value = parseFloat(input.value);
+        const range = validationRanges[field];
+        
+        if (range && (value < range.min || value > range.max)) {
+            input.classList.add('is-invalid');
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            return true;
+        }
+    }
+
+    // Add validation listeners to all gait customization fields
+    document.querySelectorAll('.gait-customization input').forEach(input => {
+        input.addEventListener('input', () => validateInput(input));
+    });
+
+    // Handle polynomial fitting
+    document.getElementById('fit-polynomials').addEventListener('click', async function() {
+        try {
+            const response = await fetch('/open_duck_mini/fit_polynomials', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                addLogEntry('Polynomials fitted successfully', 'success', 1);
+                // Show plot if available
+                if (data.plot_url) {
+                    window.open(data.plot_url, '_blank');
+                }
+            } else {
+                addLogEntry(`Polynomial fitting failed: ${data.error}`, 'error', 1);
+            }
+        } catch (error) {
+            addLogEntry(`Error: ${error.message}`, 'error', 1);
+        }
+    });
+
+    // Handle motion replay
+    document.getElementById('replay-motion').addEventListener('click', async function() {
+        try {
+            const response = await fetch('/open_duck_mini/replay_motion', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                addLogEntry('Motion replay started', 'success', 1);
+                // Open visualization in new window if available
+                if (data.visualization_url) {
+                    window.open(data.visualization_url, '_blank');
+                }
+            } else {
+                addLogEntry(`Motion replay failed: ${data.error}`, 'error', 1);
+            }
+        } catch (error) {
+            addLogEntry(`Error: ${error.message}`, 'error', 1);
+        }
+    });
+
+    // Validate form before submission
+    motionForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validate all gait customization fields
+        const isValid = Array.from(document.querySelectorAll('.gait-customization input'))
+            .map(input => validateInput(input))
+            .every(valid => valid);
+            
+        if (!isValid) {
+            addLogEntry('Please correct the validation errors before submitting', 'error', 1);
+            return;
+        }
+        
+        // Rest of the existing form submission code...
+    });
 });
 </script>
 {% endblock %} 

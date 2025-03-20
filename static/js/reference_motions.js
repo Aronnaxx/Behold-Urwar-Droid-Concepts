@@ -31,9 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
         previewSection.style.display = 'none';
         
         try {
-            // Show progress
-            progressBar.style.width = '50%';
-            addLogEntry('Generating motion...');
+            // Show initial progress
+            progressBar.style.width = '25%';
+            addLogEntry('Starting motion generation process...');
             
             // Submit form data
             const formData = new FormData(form);
@@ -48,15 +48,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.error);
             }
             
-            // Update progress
-            progressBar.style.width = '100%';
-            addLogEntry('Motion generated successfully!', 'success');
+            // Log each completed step
+            if (data.steps_completed) {
+                data.steps_completed.forEach((step, index) => {
+                    const progress = ((index + 1) / data.steps_completed.length) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    addLogEntry(step, 'success');
+                });
+            }
             
             // Store motion data and show preview
             currentMotionData = data.motion_data;
             if (currentMotionData) {
                 previewSection.style.display = 'block';
                 initializePreview(currentMotionData);
+            }
+            
+            // Log any command output for debugging
+            if (data.output) {
+                addLogEntry(`Command output: ${data.output}`, 'info');
             }
             
         } catch (error) {

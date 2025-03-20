@@ -173,5 +173,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 .tmp/*
-checkpoints/*
-motion_data/*
+
+# Checkpoints
+# uncomment these when ready
+# checkpoints/*
+# motion_data/*
