@@ -52,6 +52,55 @@
         position: absolute;
         left: 0;
     }
+    .workflow-step {
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .step-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    .step-status {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    .step-status.success {
+        background-color: var(--success-bg);
+        color: var(--success-text);
+    }
+    .step-status.error {
+        background-color: var(--error-bg);
+        color: var(--error-text);
+    }
+    .step-status.running {
+        background-color: var(--info-bg);
+        color: var(--info-text);
+    }
+    .workflow-form {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .preview-container {
+        margin-top: 2rem;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        min-height: 200px;
+        background-color: var(--bg-primary);
+    }
+    .progress-container {
+        margin-top: 2rem;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        background-color: var(--bg-primary);
+    }
 </style>
 {% endblock %}
 
@@ -67,102 +116,251 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-body">
-                <h1 class="card-title">{{ duck.name }}</h1>
-                <div class="model-viewer mb-4">
-                    {% if duck.type == 'open_duck_mini_v2' %}
-                    <model-viewer 
-                        src="{{ duck.model_path }}"
-                        camera-controls
-                        auto-rotate
-                        auto-rotate-delay="0"
-                        rotation-per-second="30deg"
-                        camera-orbit="45deg 65deg 2m"
-                        min-camera-orbit="auto auto auto"
-                        max-camera-orbit="auto auto auto"
-                        camera-target="0 1 0"
-                        field-of-view="30deg"
-                        environment-image="neutral"
-                        shadow-intensity="1"
-                        exposure="1"
-                        bounds="tight"
-                        alt="{{ duck.name }} visualization">
-                    </model-viewer>
-                    {% elif duck.type == 'bdx' %}
-                    <model-viewer 
-                        src="{{ duck.model_path }}"
-                        camera-controls
-                        auto-rotate
-                        auto-rotate-delay="0"
-                        rotation-per-second="30deg"
-                        camera-orbit="45deg 65deg 2m"
-                        min-camera-orbit="auto auto auto"
-                        max-camera-orbit="auto auto auto"
-                        camera-target="0 0 0"
-                        field-of-view="30deg"
-                        environment-image="neutral"
-                        shadow-intensity="1"
-                        exposure="1"
-                        bounds="tight"
-                        alt="{{ duck.name }} visualization">
-                    </model-viewer>
-                    {% else %}
-                    <div class="model-viewer-placeholder">
-                        <i class="fas fa-robot"></i>
-                        <p>3D Model Coming Soon</p>
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-4" id="duckTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+            Overview
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow" type="button" role="tab">
+            Training Workflow
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="duckTabContent">
+    <!-- Overview Tab -->
+    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h1 class="card-title">{{ duck.name }}</h1>
+                        <div class="model-viewer mb-4">
+                            {% if duck.type == 'open_duck_mini_v2' %}
+                            <model-viewer 
+                                src="{{ duck.model_path }}"
+                                camera-controls
+                                auto-rotate
+                                auto-rotate-delay="0"
+                                rotation-per-second="30deg"
+                                camera-orbit="45deg 65deg 2m"
+                                min-camera-orbit="auto auto auto"
+                                max-camera-orbit="auto auto auto"
+                                camera-target="0 1 0"
+                                field-of-view="30deg"
+                                environment-image="neutral"
+                                shadow-intensity="1"
+                                exposure="1"
+                                bounds="tight"
+                                alt="{{ duck.name }} visualization">
+                            </model-viewer>
+                            {% elif duck.type == 'bdx' %}
+                            <model-viewer 
+                                src="{{ duck.model_path }}"
+                                camera-controls
+                                auto-rotate
+                                auto-rotate-delay="0"
+                                rotation-per-second="30deg"
+                                camera-orbit="45deg 65deg 2m"
+                                min-camera-orbit="auto auto auto"
+                                max-camera-orbit="auto auto auto"
+                                camera-target="0 0 0"
+                                field-of-view="30deg"
+                                environment-image="neutral"
+                                shadow-intensity="1"
+                                exposure="1"
+                                bounds="tight"
+                                alt="{{ duck.name }} visualization">
+                            </model-viewer>
+                            {% else %}
+                            <div class="model-viewer-placeholder">
+                                <i class="fas fa-robot"></i>
+                                <p>3D Model Coming Soon</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h2>Description</h2>
+                            <p>{{ duck.description }}</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <h2>Features</h2>
+                            <ul class="feature-list">
+                                {% for feature in duck.features %}
+                                <li>{{ feature }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     </div>
-                    {% endif %}
                 </div>
-                
-                <div class="mb-4">
-                    <h2>Description</h2>
-                    <p>{{ duck.description }}</p>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h2>Specifications</h2>
+                        {% for spec in duck.specifications %}
+                        <div class="card spec-card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ spec.title }}</h5>
+                                <p class="card-text">{{ spec.value }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
 
-                <div class="mb-4">
-                    <h2>Features</h2>
-                    <ul class="feature-list">
-                        {% for feature in duck.features %}
-                        <li>{{ feature }}</li>
+                <div class="card">
+                    <div class="card-body">
+                        <h2>Related Resources</h2>
+                        {% for resource in duck.resources %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ resource.title }}</h5>
+                                <p class="card-text">{{ resource.description }}</p>
+                                <a href="{{ resource.url }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-external-link-alt"></i> Learn More
+                                </a>
+                            </div>
+                        </div>
                         {% endfor %}
-                    </ul>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2>Specifications</h2>
-                {% for spec in duck.specifications %}
-                <div class="card spec-card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ spec.title }}</h5>
-                        <p class="card-text">{{ spec.value }}</p>
-                    </div>
-                </div>
-                {% endfor %}
+    <!-- Workflow Tab -->
+    <div class="tab-pane fade" id="workflow" role="tabpanel">
+        <div class="workflow-container">
+            <div class="workflow-header">
+                <h2>Training Workflow for {{ duck.name }}</h2>
+                <p class="lead">Follow these steps to train your duck model</p>
             </div>
-        </div>
 
-        <div class="card">
-            <div class="card-body">
-                <h2>Related Resources</h2>
-                {% for resource in duck.resources %}
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ resource.title }}</h5>
-                        <p class="card-text">{{ resource.description }}</p>
-                        <a href="{{ resource.url }}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-external-link-alt"></i> Learn More
-                        </a>
+            <!-- Step 1: Motion Generation -->
+            <div class="workflow-step" id="step1">
+                <div class="step-header">
+                    <h3>Step 1: Generate Reference Motion</h3>
+                    <div class="step-status" id="step1-status"></div>
+                </div>
+                
+                <div class="step-content">
+                    <form id="motion-form" class="workflow-form">
+                        <input type="hidden" name="duck_type" value="{{ duck.type }}">
+                        <div class="form-group">
+                            <label for="motion-type">Motion Type</label>
+                            <select id="motion-type" name="motion_type" class="form-control" required>
+                                <option value="walk">Walking</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+
+                        <div id="walk-params" class="motion-params">
+                            <div class="form-group">
+                                <label for="speed">Speed (m/s)</label>
+                                <input type="number" id="speed" name="speed" class="form-control"
+                                       min="0.1" max="2.0" step="0.1" value="0.5">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="duration">Duration (s)</label>
+                                <input type="number" id="duration" name="duration" class="form-control"
+                                       min="1" max="60" step="1" value="10">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="stride-length">Stride Length (m)</label>
+                                <input type="number" id="stride-length" name="stride_length" class="form-control"
+                                       min="0.1" max="0.5" step="0.05" value="0.2">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Generate Motion</button>
+                    </form>
+
+                    <div id="motion-preview" class="preview-container">
+                        <!-- Motion preview will be rendered here -->
                     </div>
                 </div>
-                {% endfor %}
+            </div>
+
+            <!-- Step 2: Training -->
+            <div class="workflow-step" id="step2">
+                <div class="step-header">
+                    <h3>Step 2: Train Policy</h3>
+                    <div class="step-status" id="step2-status"></div>
+                </div>
+                
+                <div class="step-content">
+                    <form id="training-form" class="workflow-form">
+                        <input type="hidden" name="duck_type" value="{{ duck.type }}">
+                        <div class="form-group">
+                            <label for="reference-motion">Reference Motion</label>
+                            <select id="reference-motion" name="reference_motion" class="form-control" required>
+                                <!-- Will be populated with generated motions -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="epochs">Training Epochs</label>
+                            <input type="number" id="epochs" name="epochs" class="form-control"
+                                   min="1" max="1000" step="1" value="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="batch-size">Batch Size</label>
+                            <input type="number" id="batch-size" name="batch_size" class="form-control"
+                                   min="1" max="512" step="1" value="32">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="learning-rate">Learning Rate</label>
+                            <input type="number" id="learning-rate" name="learning_rate" class="form-control"
+                                   min="0.0001" max="0.1" step="0.0001" value="0.001">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Start Training</button>
+                    </form>
+
+                    <div id="training-progress" class="progress-container">
+                        <!-- Training progress will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Testing -->
+            <div class="workflow-step" id="step3">
+                <div class="step-header">
+                    <h3>Step 3: Test in Playground</h3>
+                    <div class="step-status" id="step3-status"></div>
+                </div>
+                
+                <div class="step-content">
+                    <form id="testing-form" class="workflow-form">
+                        <input type="hidden" name="duck_type" value="{{ duck.type }}">
+                        <div class="form-group">
+                            <label for="trained-model">Trained Model</label>
+                            <select id="trained-model" name="model_file" class="form-control" required>
+                                {% for model in trained_models %}
+                                <option value="{{ model.path }}">{{ model.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Test in Playground</button>
+                    </form>
+
+                    <div id="playground-viewer" class="preview-container">
+                        <!-- Playground viewer will be rendered here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -171,4 +369,5 @@
 
 {% block extra_js %}
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<script src="{{ url_for('static', filename='js/workflow.js') }}"></script>
 {% endblock %} 

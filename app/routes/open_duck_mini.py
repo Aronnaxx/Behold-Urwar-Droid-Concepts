@@ -1,7 +1,11 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, send_file
 import subprocess
 import os
 from pathlib import Path
+import json
+import tempfile
+from datetime import datetime
+from ..services.training import training_service
 
 # Create blueprint with URL prefix
 open_duck_mini = Blueprint('open_duck_mini', __name__, url_prefix='/open_duck_mini')
@@ -33,129 +37,213 @@ def reference_motions():
     """Render the reference motion generation page."""
     return render_template('reference_motions.html')
 
-@open_duck_mini.route('/setup', methods=['POST'])
-def setup():
+@open_duck_mini.route('/check_status')
+def check_status():
     """
-    Endpoint to run the setup for Open Duck Mini.
+    Endpoint to check the status of Open Duck Mini running processes.
     """
     try:
-        # Install the Open Duck Playground package
-        playground_cwd = os.path.join(os.getcwd(), 'submodules', 'open_duck_playground')
-        reference_motion_cwd = os.path.join(os.getcwd(), 'submodules', 'open_duck_reference_motion_generator')
+        # Check if the playground is running
+        running = check_process_running('gait_playground')
         
-        # Check if directories exist
-        if not os.path.exists(playground_cwd) or not os.path.exists(reference_motion_cwd):
-            return jsonify({
-                'success': False, 
-                'error': f'One or more required directories not found:\n{playground_cwd}\n{reference_motion_cwd}'
-            }), 500
+        return jsonify({
+            'success': True,
+            'running': running
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error checking status: {str(e)}'
+        })
 
-        # Install the Open Duck Playground package
-        stdout, stderr = run_command("pip install -e . -v", playground_cwd)
+@open_duck_mini.route('/launch', methods=['POST'])
+def launch():
+    """
+    Endpoint to launch the Open Duck Mini application.
+    """
+    try:
+        # Launch the gait playground
+        output = run_command(['uv', 'run', 'open_duck_reference_motion_generator/gait_playground.py', '--duck', 'open_duck_mini_v2'])
         
-        # Install the Open Duck Reference Motion Generator package
-        stdout, stderr = run_command("pip install -e . -v", reference_motion_cwd)
+        return jsonify({
+            'success': True,
+            'output': output
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Launch failed with error: {str(e)}'
+        })
+
+@open_duck_mini.route('/generate_motion', methods=['POST'])
+def generate_motion():
+    """
+    Endpoint to generate reference motions for the Open Duck Mini.
+    Supports both Auto Waddle and Advanced modes.
+    """
+    try:
+        # Get form data
+        mode = request.form.get('mode', 'auto')
+        output_dir = request.form.get('output_dir', 'generated_motions')
+        num_jobs = request.form.get('num_jobs')
         
-        # Check installation success - look for both package name formats
-        verify_stdout, verify_stderr = run_command("pip show Open-Duck-Playground", playground_cwd)
-        if "Name: Open-Duck-Playground" not in verify_stdout and "Name: Open_Duck_Playground" not in verify_stdout:
+        # Build base command
+        cmd = ['uv', 'run', 'scripts/auto_waddle.py']
+        
+        if num_jobs:
+            cmd.append(f'-j{num_jobs}')
+            
+        if mode == 'auto':
+            # Auto Waddle Mode
+            generation_type = request.form.get('generation_type')
+            cmd.append('--duck')
+            cmd.append('open_duck_mini_v2')  # Default to v2 for auto mode
+            
+            if generation_type == 'sweep':
+                cmd.append('--sweep')
+            elif generation_type == 'random':
+                num_motions = request.form.get('num_motions', '10')
+                cmd.extend(['--num', num_motions])
+            else:  # single motion
+                motion_type = request.form.get('motion_type')
+                duration = request.form.get('duration', '5')
+                speed = request.form.get('speed', '0.5')
+                cmd.extend(['--motion', motion_type, '--duration', duration, '--speed', speed])
+        else:
+            # Advanced Mode
+            duck_type = request.form.get('duck_type', 'open_duck_mini_v2')
+            cmd.append('--duck')
+            cmd.append(duck_type)
+            
+            # Handle sweep parameters if provided
+            speed_min = request.form.get('speed_min')
+            speed_max = request.form.get('speed_max')
+            duration_min = request.form.get('duration_min')
+            duration_max = request.form.get('duration_max')
+            
+            if all([speed_min, speed_max, duration_min, duration_max]):
+                cmd.append('--sweep')
+                # These parameters will be used by the script to define the sweep range
+                cmd.extend([
+                    '--speed_min', speed_min,
+                    '--speed_max', speed_max,
+                    '--duration_min', duration_min,
+                    '--duration_max', duration_max
+                ])
+            
+        cmd.extend(['--output_dir', output_dir])
+        
+        # Run command
+        stdout, stderr = run_command(cmd)
+        
+        # Read generated motion data
+        motion_file = os.path.join(output_dir, 'motion.json')
+        if os.path.exists(motion_file):
+            with open(motion_file, 'r') as f:
+                motion_data = json.load(f)
+        else:
+            motion_data = None
+        
+        return jsonify({
+            'success': True,
+            'output': stdout,
+            'error': stderr,
+            'motion_data': motion_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Motion generation failed with error: {str(e)}'
+        })
+
+@open_duck_mini.route('/download_motion', methods=['POST'])
+def download_motion():
+    """
+    Endpoint to download a generated motion file.
+    """
+    try:
+        motion_data = request.json
+        if not motion_data:
             return jsonify({
                 'success': False,
-                'error': f'Installation verification failed.\nStdout: {stdout}\nStderr: {stderr}'
-            }), 500
+                'error': 'No motion data provided'
+            })
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+            json.dump(motion_data, temp_file)
+            temp_path = temp_file.name
+        
+        # Send the file
+        return send_file(
+            temp_path,
+            mimetype='application/json',
+            as_attachment=True,
+            download_name=f'motion_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        )
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Download failed with error: {str(e)}'
+        })
+    finally:
+        # Clean up the temporary file
+        if 'temp_path' in locals():
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+
+@open_duck_mini.route('/start_training', methods=['POST'])
+def start_training():
+    """
+    Endpoint to start training for the Open Duck Mini.
+    """
+    try:
+        # Get training options from request
+        training_options = request.json or {}
+        
+        # Start training
+        success, result = training_service.start_training('open_duck_mini_v2', training_options)
+        
+        if not success:
+            return jsonify({
+                'success': False,
+                'error': result
+            }), 400
             
         return jsonify({
             'success': True,
-            'output': f'Installation successful.\nStdout: {stdout}\nStderr: {stderr}'
+            'task_id': result
         })
         
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Setup failed with error: {str(e)}'
+            'error': f'Training failed to start: {str(e)}'
         }), 500
 
-@open_duck_mini.route('/launch', methods=['POST'])
-def launch():
+@open_duck_mini.route('/training_status/<task_id>', methods=['GET'])
+def training_status(task_id):
     """
-    Endpoint to launch the Open Duck Mini gait playground.
+    Endpoint to check the status of a training task.
     """
-    cwd = os.path.join(os.getcwd(), 'submodules', 'open_duck_reference_motion_generator')
-    
-    # Add the playground directory to PYTHONPATH
-    env = os.environ.copy()
-    env['PYTHONPATH'] = f"{cwd}:{env.get('PYTHONPATH', '')}"
-    
     try:
-        # First check if the process is already running
-        ps_result = subprocess.run(
-            ["ps", "aux"], 
-            capture_output=True, 
-            text=True
-        )
-        if "gait_playground.py" in ps_result.stdout:
+        status = training_service.get_task_status(task_id)
+        
+        if status is None:
             return jsonify({
                 'success': False,
-                'error': 'Application is already running. Please close it before launching again.'
-            }), 400
-
-        # Launch the application with debug output
-        result = subprocess.Popen(
-            ["uv", "run", "open_duck_reference_motion_generator/gait_playground.py", "--duck", "open_duck_mini_v2"],
-            cwd=cwd,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1
-        )
+                'error': 'Task not found'
+            }), 404
+            
+        return jsonify({
+            'success': True,
+            'status': status
+        })
         
-        # Read initial output to check for immediate errors
-        try:
-            stdout, stderr = result.communicate(timeout=5)
-            if result.returncode is not None and result.returncode != 0:
-                return jsonify({
-                    'success': False,
-                    'error': f'Application failed to start:\n{stderr}'
-                }), 500
-                
-            return jsonify({
-                'success': True,
-                'output': f'Application launched successfully.\nOutput: {stdout}\nErrors: {stderr}'
-            })
-            
-        except subprocess.TimeoutExpired:
-            # Process is still running (good!)
-            result.kill()  # Kill the process we used for checking
-            return jsonify({
-                'success': True,
-                'output': 'Application launched successfully and is running in the background.'
-            })
-            
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': f'Launch failed with error: {str(e)}'
-        }), 500
-
-@open_duck_mini.route('/status', methods=['GET'])
-def status():
-    """
-    Endpoint to check the status of Open Duck Mini setup and running processes.
-    """
-    playground_cwd = os.path.join(os.getcwd(), 'submodules', 'open_duck_reference_motion_generator')
-    
-    # Check if the package is installed - look for both package name formats
-    stdout, _ = run_command("pip show Open-Duck-Playground", playground_cwd)
-    if "Name: Open-Duck-Playground" not in stdout:
-        stdout, _ = run_command("pip show Open_Duck_Playground", playground_cwd)
-    playground_installed = "Name: Open-Duck-Playground" in stdout or "Name: Open_Duck_Playground" in stdout
-    
-    # Check if the gait playground file exists
-    playground_file = Path(playground_cwd) / 'open_duck_reference_motion_generator' / 'gait_playground.py'
-    
-    return jsonify({
-        'setup_file_exists': playground_installed,
-        'main_file_exists': playground_file.exists(),
-        'directory_exists': os.path.exists(playground_cwd)
-    }) 
+            'error': f'Failed to get training status: {str(e)}'
+        }), 500 
