@@ -43,18 +43,6 @@ def duck_page(duck_type):
             {'title': 'Weight', 'value': '5kg'},
             {'title': 'Battery Life', 'value': '4 hours'}
         ],
-        'resources': [
-            {
-                'title': 'Training Guide',
-                'description': 'Learn how to train your own model',
-                'url': url_for('main.learn', topic='training')
-            },
-            {
-                'title': 'Playground',
-                'description': 'Test and experiment with the duck',
-                'url': url_for('playground.view_playground', duck_type=duck_type)
-            }
-        ]
     }
     
     trained_models = get_trained_models(duck_type)

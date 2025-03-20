@@ -492,17 +492,17 @@ document.addEventListener('DOMContentLoaded', function() {
     async function checkFileAvailability() {
         try {
             // Check motion files
-            const motionResponse = await fetch('/open_duck_mini/check_motion_files');
+            const motionResponse = await fetch(`/{{ duck.type }}/check_motion_files`);
             const motionData = await motionResponse.json();
             updateFileStatus(motionFileStatus, motionData.available);
             
             // Check training files
-            const trainingResponse = await fetch('/open_duck_mini/check_training_files');
+            const trainingResponse = await fetch(`/{{ duck.type }}/check_training_files`);
             const trainingData = await trainingResponse.json();
             updateFileStatus(trainingFileStatus, trainingData.available);
             
             // Check testing files
-            const testingResponse = await fetch('/open_duck_mini/check_testing_files');
+            const testingResponse = await fetch(`/{{ duck.type }}/check_testing_files`);
             const testingData = await testingResponse.json();
             updateFileStatus(testingFileStatus, testingData.available);
 
@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const formData = new FormData(motionForm);
-            const response = await fetch('/open_duck_mini/generate_motion', {
+            const response = await fetch(`/{{ duck.type }}/generate_motion`, {
                 method: 'POST',
                 body: formData
             });
@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const formData = new FormData(trainingForm);
-            const response = await fetch('/open_duck_mini/start_training', {
+            const response = await fetch(`/{{ duck.type }}/start_training`, {
                 method: 'POST',
                 body: formData
             });
@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const formData = new FormData(testingForm);
-            const response = await fetch('/open_duck_mini/start_testing', {
+            const response = await fetch(`/{{ duck.type }}/start_testing`, {
                 method: 'POST',
                 body: formData
             });
@@ -692,7 +692,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function pollTrainingProgress(taskId) {
         try {
-            const response = await fetch(`/open_duck_mini/training_status/${taskId}`);
+            const response = await fetch(`/{{ duck.type }}/training_status/${taskId}`);
             const data = await response.json();
             
             if (data.success) {
@@ -766,7 +766,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle polynomial fitting
     document.getElementById('fit-polynomials').addEventListener('click', async function() {
         try {
-            const response = await fetch('/open_duck_mini/fit_polynomials', {
+            const response = await fetch(`/{{ duck.type }}/fit_polynomials`, {
                 method: 'POST'
             });
             const data = await response.json();
@@ -788,7 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle motion replay
     document.getElementById('replay-motion').addEventListener('click', async function() {
         try {
-            const response = await fetch('/open_duck_mini/replay_motion', {
+            const response = await fetch(`/{{ duck.type }}/replay_motion`, {
                 method: 'POST'
             });
             const data = await response.json();
@@ -807,6 +807,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Handle motion download
+    document.getElementById('download-motion').addEventListener('click', async function() {
+        try {
+            const response = await fetch(`/{{ duck.type }}/download_motion`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                // Get the filename from the Content-Disposition header if available
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'motion.json';
+                if (contentDisposition) {
+                    const matches = /filename="(.+)"/.exec(contentDisposition);
+                    if (matches) {
+                        filename = matches[1];
+                    }
+                }
+                
+                // Create a blob from the response
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                addLogEntry('Motion file downloaded successfully', 'success', 1);
+            } else {
+                const data = await response.json();
+                addLogEntry(`Download failed: ${data.error || 'Unknown error'}`, 'error', 1);
+            }
+        } catch (error) {
+            addLogEntry(`Error downloading motion: ${error.message}`, 'error', 1);
+        }
+    });
+
     // Playground handling
     const playgroundContainer = document.getElementById('playground-container');
     const launchPlaygroundBtn = document.getElementById('launch-playground');
@@ -816,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             if (!playgroundRunning) {
                 // Launch playground
-                const response = await fetch('/open_duck_mini/launch_playground', {
+                const response = await fetch(`/{{ duck.type }}/launch_playground`, {
                     method: 'POST'
                 });
                 const data = await response.json();
@@ -832,7 +871,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 // Stop playground
-                const response = await fetch('/open_duck_mini/close_playground', {
+                const response = await fetch(`/{{ duck.type }}/close_playground`, {
                     method: 'POST'
                 });
                 const data = await response.json();

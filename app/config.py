@@ -10,7 +10,7 @@ DUCK_TYPES = {
 # Directory Paths
 OUTPUT_DIR = Path('generated_motions')
 PLAYGROUND_DIR = Path('submodules/open_duck_playground')
-REFERENCE_MOTION_DIR = Path('submodules/open_duck_playground/open_duck_mini_v2/data')
+REFERENCE_MOTION_DIR = lambda duck_type: Path(f'submodules/open_duck_playground/{duck_type}/data')
 AWD_DIR = Path('submodules/awd')
 TRAINED_MODELS_DIR = Path('trained_models')
 STATIC_DIR = Path('static')

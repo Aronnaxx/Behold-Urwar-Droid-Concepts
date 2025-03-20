@@ -3,9 +3,7 @@ from pathlib import Path
 from datetime import datetime
 from .routes.main import main
 from .routes.duck import duck
-from .routes.training import training
-from .routes.playground import playground
-from .routes.open_duck_mini import open_duck_mini
+from .routes.duck_details import open_duck_mini, bdx
 from .config import OUTPUT_DIR, TRAINED_MODELS_DIR, DUCK_TYPES
 
 def create_app():
@@ -33,8 +31,6 @@ def create_app():
     # Register blueprints
     app.register_blueprint(main)
     app.register_blueprint(duck)
-    app.register_blueprint(training)
-    app.register_blueprint(playground)
-    app.register_blueprint(open_duck_mini)
-    
+    app.register_blueprint(open_duck_mini, url_prefix='/open_duck_mini_v2')
+    app.register_blueprint(bdx, url_prefix='/bdx')
     return app 

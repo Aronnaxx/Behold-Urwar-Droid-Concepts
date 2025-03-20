@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Submit form data
             const formData = new FormData(form);
-            const response = await fetch('/open_duck_mini/generate_motion', {
+            const response = await fetch(`/${duckType}/generate_motion`, {
                 method: 'POST',
                 body: formData
             });
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!currentMotionData) return;
         
         try {
-            const response = await fetch('/open_duck_mini/download_motion', {
+            const response = await fetch(`/${duckType}/download_motion`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
