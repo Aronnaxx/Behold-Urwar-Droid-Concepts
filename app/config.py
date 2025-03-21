@@ -1,18 +1,70 @@
 from pathlib import Path
 from datetime import datetime
 
-# Duck Types Configuration
+# Base paths
+ROOT_DIR = Path(__file__).parent.parent
+OUTPUT_DIR = ROOT_DIR / 'output'
+TRAINED_MODELS_DIR = ROOT_DIR / 'trained_models'
+GENERATED_MOTIONS_DIR = ROOT_DIR / 'generated_motions'
+
+# Create directories if they don't exist
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+TRAINED_MODELS_DIR.mkdir(parents=True, exist_ok=True)
+GENERATED_MOTIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Duck types and their display names
 DUCK_TYPES = {
-    'bdx': 'BDX Duck',
-    'open_duck_mini_v2': 'Open Duck Mini V2'
+    'open_duck_mini': {
+        'name': 'Open Duck Mini',
+        'variants': {
+            'v1': {
+                'name': 'Version 1',
+                'model_path': '/static/models/open_duck_mini_v2.glb',  # Using v2 model as placeholder
+                'description': 'The first generation of Open Duck Mini.'
+            },
+            'v2': {
+                'name': 'Version 2',
+                'model_path': '/static/models/open_duck_mini_v2.glb',
+                'description': 'Second generation with improved stability and control.'
+            },
+            'v3': {
+                'name': 'Version 3',
+                'model_path': '/static/models/open_duck_mini_v2.glb',  # Using v2 model as placeholder
+                'description': 'Latest generation with advanced features.'
+            }
+        }
+    },
+    'bdx': {
+        'name': 'BD-X',
+        'variants': {
+            'go1': {
+                'name': 'Go1',
+                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
+                'description': 'BD-X Go1 variant optimized for agility.'
+            },
+            'go2': {
+                'name': 'Go2',
+                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
+                'description': 'BD-X Go2 with enhanced payload capacity.'
+            },
+            'cybergear': {
+                'name': 'Cybergear',
+                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
+                'description': 'BD-X Cybergear featuring advanced motor control.'
+            },
+            'servo': {
+                'name': 'Servo',
+                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
+                'description': 'BD-X Servo with precise movement control.'
+            }
+        }
+    }
 }
 
 # Directory Paths
-OUTPUT_DIR = Path('generated_motions')
 PLAYGROUND_DIR = Path('submodules/open_duck_playground')
 REFERENCE_MOTION_DIR = lambda duck_type: Path(f'submodules/open_duck_playground/{duck_type}/data')
 AWD_DIR = Path('submodules/awd')
-TRAINED_MODELS_DIR = Path('trained_models')
 STATIC_DIR = Path('static')
 
 # Custom Logo Configuration
@@ -20,130 +72,95 @@ STATIC_DIR = Path('static')
 # Example: 'images/logo.png'
 CUSTOM_LOGO_PATH = None
 
-# Learning Center Content
+# Learning content structure
 LEARNING_CONTENT = {
-    'motion_generation': {
-        'title': 'Motion Generation',
-        'model_path': '/static/models/motion_generation.glb',
-        'overview': '''
-            <p>Motion generation is the first step in training a Duck Droid. This process creates a diverse set of reference motions
-            that serve as the foundation for learning complex behaviors.</p>
-            <p>Our motion generation system uses advanced algorithms to create natural, physically plausible movements
-            that the droid can learn to imitate and improve upon.</p>
-        ''',
-        'how_it_works': '''
-            <p>The motion generation process involves several key steps:</p>
-            <ol>
-                <li>Define motion parameters and constraints</li>
-                <li>Generate initial motion trajectories</li>
-                <li>Optimize for physical feasibility</li>
-                <li>Validate against real-world constraints</li>
-            </ol>
-        ''',
-        'examples': '''
-            <p>Here are some example motions that can be generated:</p>
-            <ul>
-                <li>Walking gaits</li>
-                <li>Turning maneuvers</li>
-                <li>Balance recovery</li>
-                <li>Obstacle navigation</li>
-            </ul>
-        ''',
+    'gait': {
+        'title': 'Gait Generation',
+        'model_path': '/static/models/gait.glb',
+        'overview': 'Understanding how ducks walk and generating natural gaits.',
+        'how_it_works': [
+            'Analysis of duck walking patterns',
+            'Mathematical modeling of joint movements',
+            'Dynamic balance considerations'
+        ],
+        'examples': [
+            {'title': 'Basic Walk', 'description': 'Simple forward walking motion'},
+            {'title': 'Turn', 'description': 'Turning while maintaining balance'},
+            {'title': 'Variable Speed', 'description': 'Adjusting walking speed dynamically'}
+        ],
         'key_concepts': [
-            'Motion planning and optimization',
-            'Physical constraints and feasibility',
-            'Natural movement patterns',
-            'Trajectory generation'
+            'Center of Mass',
+            'Zero Moment Point',
+            'Joint Trajectories'
         ],
         'resources': [
-            {
-                'title': 'Motion Planning Documentation',
-                'description': 'Detailed guide to motion planning algorithms',
-                'url': '#'
-            },
-            {
-                'title': 'Example Motions',
-                'description': 'Collection of pre-generated motion examples',
-                'url': '#'
-            }
+            {'title': 'Duck Locomotion Paper', 'url': '#'},
+            {'title': 'Gait Analysis Video', 'url': '#'}
         ]
     },
     'training': {
-        'title': 'Training Process',
+        'title': 'Model Training',
         'model_path': '/static/models/training.glb',
-        'overview': '''
-            <p>The training process uses reinforcement learning to teach the Duck Droid complex behaviors.
-            This phase builds upon the reference motions generated earlier to create a robust control policy.</p>
-        ''',
-        'how_it_works': '''
-            <p>Training involves:</p>
-            <ol>
-                <li>Setting up the training environment</li>
-                <li>Defining reward functions</li>
-                <li>Running parallel training episodes</li>
-                <li>Optimizing the policy network</li>
-            </ol>
-        ''',
-        'examples': '''
-            <p>Training scenarios include:</p>
-            <ul>
-                <li>Learning to walk on various terrains</li>
-                <li>Adapting to different payloads</li>
-                <li>Recovering from disturbances</li>
-                <li>Following complex paths</li>
-            </ul>
-        ''',
+        'overview': 'Training models for natural duck movement.',
+        'how_it_works': [
+            'Reference motion collection',
+            'Reinforcement learning approach',
+            'Policy optimization'
+        ],
+        'examples': [
+            {'title': 'Basic Training', 'description': 'Training a simple walking policy'},
+            {'title': 'Advanced Training', 'description': 'Training with multiple objectives'}
+        ],
         'key_concepts': [
-            'Reinforcement learning',
-            'Policy optimization',
-            'Reward shaping',
-            'Environment simulation'
+            'Policy Networks',
+            'Reward Functions',
+            'Training Environments'
         ],
         'resources': [
-            {
-                'title': 'Training Guide',
-                'description': 'Comprehensive guide to the training process',
-                'url': '#'
-            }
-        ]
-    },
-    'playground': {
-        'title': 'Mujoco Playground',
-        'model_path': '/static/models/playground.glb',
-        'overview': '''
-            <p>The Mujoco Playground provides a realistic simulation environment for testing and visualizing
-            trained models. It allows you to interact with the droid and observe its behavior in real-time.</p>
-        ''',
-        'how_it_works': '''
-            <p>The playground features:</p>
-            <ul>
-                <li>Real-time physics simulation</li>
-                <li>Interactive controls</li>
-                <li>Performance metrics</li>
-                <li>Visual debugging tools</li>
-            </ul>
-        ''',
-        'examples': '''
-            <p>You can use the playground to:</p>
-            <ul>
-                <li>Test trained models</li>
-                <li>Analyze performance</li>
-                <li>Debug behaviors</li>
-                <li>Record demonstrations</li>
-            </ul>
-        ''',
-        'key_concepts': [
-            'Physics simulation',
-            'Real-time visualization',
-            'Performance analysis',
-            'Interactive testing'
-        ],
-        'resources': [
-            {
-                'title': 'Playground Guide',
-                'description': 'Guide to using the Mujoco Playground',
-                'url': '#'
-            }
+            {'title': 'RL in Robotics', 'url': '#'},
+            {'title': 'Training Guide', 'url': '#'}
         ]
     }
-} 
+}
+
+class Config:
+    """Base configuration."""
+    SECRET_KEY = 'dev'  # Change this in production
+    FLASK_APP = 'app.py'
+    FLASK_ENV = 'development'
+    PORT = 5003  # Set the port to 5003
+    
+    # File upload settings
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    UPLOAD_FOLDER = str(ROOT_DIR / 'uploads')
+    ALLOWED_EXTENSIONS = {'json', 'pkl', 'onnx'}
+    
+    # Training settings
+    DEFAULT_NUM_ENVS = 4096
+    MAX_NUM_ENVS = 8192
+    MIN_NUM_ENVS = 1
+    
+    # Device settings
+    DEFAULT_SERIAL_BAUDRATE = 115200
+    DEFAULT_SSH_PORT = 22
+    
+    # Paths
+    ROOT_DIR = str(ROOT_DIR)
+    OUTPUT_DIR = str(OUTPUT_DIR)
+    TRAINED_MODELS_DIR = str(TRAINED_MODELS_DIR)
+    GENERATED_MOTIONS_DIR = str(GENERATED_MOTIONS_DIR)
+
+class ProductionConfig(Config):
+    """Production configuration."""
+    FLASK_ENV = 'production'
+    # Add production-specific settings here
+
+class DevelopmentConfig(Config):
+    """Development configuration."""
+    DEBUG = True
+    # Add development-specific settings here
+
+class TestingConfig(Config):
+    """Testing configuration."""
+    TESTING = True
+    # Add testing-specific settings here 

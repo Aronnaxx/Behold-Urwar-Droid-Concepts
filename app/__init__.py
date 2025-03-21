@@ -1,18 +1,25 @@
 from flask import Flask
+from flask_cors import CORS
 from pathlib import Path
 from datetime import datetime
+from .config import Config, OUTPUT_DIR, TRAINED_MODELS_DIR, DUCK_TYPES
 from .routes.main import main
-from .routes.duck import duck
-from .routes.duck_details import open_duck_mini, bdx
-from .config import OUTPUT_DIR, TRAINED_MODELS_DIR, DUCK_TYPES
+from .routes.duck import DuckBlueprint
+from .routes.routes import DuckRoutes
 
-def create_app():
+def create_app(config_class=Config):
     """Create and configure the Flask application."""
     # Get the root directory (where templates are located)
     root_dir = Path(__file__).parent.parent
     app = Flask(__name__, 
                 template_folder=str(root_dir / 'templates'),
                 static_folder=str(root_dir / 'static'))
+    
+    CORS(app)
+    app.config.from_object(config_class)
+    
+    # Set the port
+    app.config['SERVER_NAME'] = f'127.0.0.1:{app.config["PORT"]}'
     
     # Add datetime filter
     @app.template_filter('datetime')
@@ -25,12 +32,24 @@ def create_app():
     # Create necessary directories
     OUTPUT_DIR.mkdir(exist_ok=True)
     TRAINED_MODELS_DIR.mkdir(exist_ok=True)
-    for duck_type in DUCK_TYPES:
-        (TRAINED_MODELS_DIR / duck_type).mkdir(exist_ok=True)
+    for duck_type, info in DUCK_TYPES.items():
+        duck_dir = TRAINED_MODELS_DIR / duck_type
+        duck_dir.mkdir(exist_ok=True)
+        for variant_id in info['variants'].keys():
+            (duck_dir / variant_id).mkdir(exist_ok=True)
     
     # Register blueprints
     app.register_blueprint(main)
-    app.register_blueprint(duck)
-    app.register_blueprint(open_duck_mini, url_prefix='/open_duck_mini_v2')
-    app.register_blueprint(bdx, url_prefix='/bdx')
+    
+    # Create duck blueprints
+    open_duck_mini = DuckBlueprint('open_duck_mini', __name__, url_prefix='/open_duck_mini')
+    bdx = DuckBlueprint('bdx', __name__, url_prefix='/bdx')
+    
+    # Register duck blueprints
+    app.register_blueprint(open_duck_mini)
+    app.register_blueprint(bdx)
+    
+    # Initialize API routes
+    DuckRoutes(app)
+    
     return app 

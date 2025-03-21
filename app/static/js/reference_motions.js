@@ -13,9 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get the current duck type from the URL
     function getCurrentDuckType() {
         const path = window.location.pathname;
-        if (path.includes('/go_bdx')) return 'go_bdx';
-        if (path.includes('/open_duck_mini_v2')) return 'open_duck_mini_v2';
-        return 'open_duck_mini_v2'; // default
+        if (path.includes('/bdx')) return 'go_bdx';
+        if (path.includes('/open_duck_mini')) return 'open_duck_mini_v2';
+        return 'open_duck_mini'; // default
     }
 
     // Initialize UI state

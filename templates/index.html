@@ -38,6 +38,26 @@
     .duck-card:hover {
         transform: translateY(-5px);
     }
+    .variant-list {
+        margin-top: 1rem;
+        padding: 0;
+        list-style: none;
+    }
+    .variant-list li {
+        margin-bottom: 0.5rem;
+    }
+    .variant-list li:last-child {
+        margin-bottom: 0;
+    }
+    .variant-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background-color: var(--bs-primary);
+        color: white;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        margin-right: 0.5rem;
+    }
 </style>
 {% endblock %}
 
@@ -55,63 +75,43 @@
             <div class="card-body">
                 <h5 class="card-title">Available Duck Types</h5>
                 <div class="row">
-                    {% for type, name in duck_types.items() %}
+                    {% for type, info in duck_types.items() %}
                     <div class="col-md-6 mb-4">
                         <div class="card h-100 duck-card">
                             <div class="card-body">
-                                <h5 class="card-title">{{ name }}</h5>
+                                <h5 class="card-title">{{ info.name }}</h5>
                                 <div class="model-viewer">
-                                    {% if type == 'open_duck_mini_v2' %}
+                                    {% set first_variant = info.variants.values()|list|first %}
                                     <model-viewer 
-                                        src="/static/models/{{ type }}.glb"
+                                        src="{{ first_variant.model_path }}"
                                         camera-controls
                                         auto-rotate
                                         auto-rotate-delay="0"
                                         rotation-per-second="30deg"
-                                        camera-orbit="45deg 65deg 2m"
+                                        camera-orbit="45deg 65deg {% if type == 'bdx' %}1.5m{% else %}2m{% endif %}"
                                         min-camera-orbit="auto auto auto"
                                         max-camera-orbit="auto auto auto"
-                                        camera-target="0m 0m 0m"
+                                        camera-target="0m {% if type == 'bdx' %}0.4m{% else %}0m{% endif %} 0m"
                                         field-of-view="30deg"
                                         environment-image="neutral"
                                         shadow-intensity="1"
                                         exposure="1"
                                         bounds="tight"
                                         disable-zoom
-                                        alt="{{ name }} visualization">
+                                        alt="{{ info.name }} visualization">
                                     </model-viewer>
-                                    {% elif type == 'bdx' %}
-                                    <model-viewer 
-                                        src="/static/models/{{ type }}.glb"
-                                        camera-controls
-                                        auto-rotate
-                                        auto-rotate-delay="0"
-                                        rotation-per-second="30deg"
-                                        camera-orbit="45deg 65deg 1.5m"
-                                        min-camera-orbit="auto auto auto"
-                                        max-camera-orbit="auto auto auto"
-                                        camera-target="0m 0.4m 0m"
-                                        field-of-view="30deg"
-                                        environment-image="neutral"
-                                        shadow-intensity="1"
-                                        exposure="1"
-                                        bounds="tight"
-                                        disable-zoom
-                                        alt="{{ name }} visualization">
-                                    </model-viewer>
-                                    {% else %}
-                                    <div class="model-viewer-placeholder">
-                                        <i class="fas fa-robot"></i>
-                                        <p>3D Model Coming Soon</p>
-                                    </div>
-                                    {% endif %}
                                 </div>
-                                <p class="card-text">Explore and work with the {{ name }} implementation.</p>
-                                <div class="d-flex gap-2">
-                                    <a href="{{ url_for('duck.duck_page', duck_type=type) }}" class="btn btn-primary">
-                                        <i class="fas fa-robot"></i> View Details
-                                    </a>
-                                </div>
+                                <p class="card-text">Available variants:</p>
+                                <ul class="variant-list">
+                                    {% for variant_id, variant in info.variants.items() %}
+                                    <li>
+                                        <a href="{{ url_for(type + '.duck_page') }}?variant={{ variant_id }}" class="text-decoration-none">
+                                            <span class="variant-badge">{{ variant.name }}</span>
+                                            {{ variant.description }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
                             </div>
                         </div>
                     </div>

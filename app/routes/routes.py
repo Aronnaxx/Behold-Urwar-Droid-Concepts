@@ -1,18 +1,16 @@
-from flask import Blueprint, render_template, redirect, url_for, jsonify, request
-from datetime import datetime
+from flask import Blueprint, request, jsonify, current_app
 from pathlib import Path
-from ..config import DUCK_TYPES, TRAINED_MODELS_DIR
 from ..services.open_duck_mini_playground import OpenDuckPlaygroundService
 from ..services.awd import AWDService
 from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
 
-class DuckBlueprint(Blueprint):
-    """Blueprint for handling duck-related routes and views."""
+class DuckRoutes:
+    """Class to handle all duck-related routes."""
     
-    def __init__(self, name, import_name, **kwargs):
-        super().__init__(name, import_name, **kwargs)
-        self.workspace_root = Path(__file__).parent.parent.parent
+    def __init__(self, app):
+        self.app = app
+        self.workspace_root = Path(app.root_path).parent
         
         # Initialize services
         self.playground_service = OpenDuckPlaygroundService(self.workspace_root)
@@ -23,88 +21,28 @@ class DuckBlueprint(Blueprint):
         # Register routes
         self.register_routes()
         
-    def get_trained_models(self, duck_type, variant):
-        """Get list of trained models for a specific duck type and variant."""
-        models_dir = TRAINED_MODELS_DIR / duck_type / variant
-        if not models_dir.exists():
-            return []
-        
-        models = []
-        for model_file in models_dir.glob('*.onnx'):
-            models.append({
-                'name': model_file.name,
-                'path': str(model_file),
-                'date': datetime.fromtimestamp(model_file.stat().st_mtime)
-            })
-        return sorted(models, key=lambda x: x['date'], reverse=True)
-        
     def register_routes(self):
-        """Register all routes for this blueprint."""
+        """Register all routes for the application."""
         
-        @self.route('/')
-        def duck_page():
-            """Render the page for a specific duck type."""
-            duck_type = self.name
-            if duck_type not in DUCK_TYPES:
-                return redirect(url_for('main.index'))
-            
-            # Get the variant from query parameters, default to first variant
-            variant_id = request.args.get('variant', list(DUCK_TYPES[duck_type]['variants'].keys())[0])
-            variant = DUCK_TYPES[duck_type]['variants'].get(variant_id)
-            
-            if not variant:
-                return redirect(url_for('main.index'))
-            
-            # Create a duck object with all necessary information
-            duck_data = {
-                'name': DUCK_TYPES[duck_type]['name'],
-                'type': duck_type,
-                'variant': {
-                    'id': variant_id,
-                    'name': variant['name'],
-                    'model_path': variant['model_path'],
-                    'description': variant['description']
-                },
-                'features': [
-                    'Advanced walking dynamics',
-                    'Real-time motion planning',
-                    'Terrain adaptation',
-                    'Energy optimization'
-                ],
-                'specifications': [
-                    {'title': 'Height', 'value': '1.2m'},
-                    {'title': 'Weight', 'value': '5kg'},
-                    {'title': 'Battery Life', 'value': '4 hours'}
-                ],
-            }
-            
-            trained_models = self.get_trained_models(duck_type, variant_id)
-            return render_template('duck_page.html', 
-                                duck=duck_data,
-                                trained_models=trained_models,
-                                variants=DUCK_TYPES[duck_type]['variants'])
-                                
-        @self.route('/train', methods=['POST'])
-        def train_duck():
-            """Start training for a specific duck type."""
+        # Training routes
+        @self.app.route('/api/train', methods=['POST'])
+        def start_training():
             try:
                 data = request.get_json()
-                variant = data.get('variant')
+                duck_type = data.get('duck_type')
                 num_envs = data.get('num_envs', 1)
                 motion_file = data.get('motion_file')
-                framework = data.get('framework', 'playground')
+                framework = data.get('framework', 'playground')  # or 'awd'
                 
                 if framework == 'playground':
                     success, message, output = self.playground_service.train_model(
-                        duck_type=self.name,
-                        variant=variant,
+                        duck_type=duck_type,
                         num_envs=num_envs,
                         motion_file=motion_file
                     )
                 else:
                     success, message, output = self.awd_service.train_model(
-                        duck_type=self.name,
-                        variant=variant,
+                        duck_type=duck_type,
                         num_envs=num_envs,
                         motion_file=motion_file
                     )
@@ -121,18 +59,17 @@ class DuckBlueprint(Blueprint):
                     'message': f'Error starting training: {str(e)}'
                 })
                 
-        @self.route('/generate_motion', methods=['POST'])
+        # Motion generation routes
+        @self.app.route('/api/generate_motion', methods=['POST'])
         def generate_motion():
-            """Generate motion for a specific duck type."""
             try:
                 data = request.get_json()
-                variant = data.get('variant')
+                duck_type = data.get('duck_type')
                 mode = data.get('mode', 'auto')
                 params = data.get('params', {})
                 
                 success, message, output = self.motion_service.generate_motion(
-                    duck_type=self.name,
-                    variant=variant,
+                    duck_type=duck_type,
                     mode=mode,
                     **params
                 )
@@ -149,12 +86,11 @@ class DuckBlueprint(Blueprint):
                     'message': f'Error generating motion: {str(e)}'
                 })
                 
-        @self.route('/deploy', methods=['POST'])
-        def deploy_duck():
-            """Deploy a model to a duck device."""
+        # Deployment routes
+        @self.app.route('/api/deploy', methods=['POST'])
+        def deploy_model():
             try:
                 data = request.get_json()
-                variant = data.get('variant')
                 model_path = data.get('model_path')
                 remote_path = data.get('remote_path')
                 device_type = data.get('device_type', 'serial')
@@ -176,12 +112,11 @@ class DuckBlueprint(Blueprint):
                     'message': f'Error deploying model: {str(e)}'
                 })
                 
-        @self.route('/connect', methods=['POST'])
-        def connect_duck():
-            """Connect to a duck device."""
+        # Device connection routes
+        @self.app.route('/api/connect', methods=['POST'])
+        def connect_device():
             try:
                 data = request.get_json()
-                variant = data.get('variant')
                 device_type = data.get('device_type', 'serial')
                 
                 if device_type == 'serial':
@@ -214,11 +149,10 @@ class DuckBlueprint(Blueprint):
                     'message': f'Error connecting to device: {str(e)}'
                 })
                 
-        @self.route('/status', methods=['GET'])
-        def get_duck_status():
-            """Get status of a duck device."""
+        # Device status route
+        @self.app.route('/api/device_status', methods=['GET'])
+        def get_device_status():
             try:
-                variant = request.args.get('variant')
                 device_type = request.args.get('device_type', 'serial')
                 success, message, status = self.deployment_service.get_device_status(device_type)
                 
@@ -232,28 +166,4 @@ class DuckBlueprint(Blueprint):
                 return jsonify({
                     'success': False,
                     'message': f'Error getting device status: {str(e)}'
-                })
-
-        @self.route('/check_motion_files', methods=['GET'])
-        def check_motion_files():
-            """Check available motion files for a specific duck type."""
-            try:
-                variant = request.args.get('variant')
-                motion_files = self.motion_service.list_motion_files(
-                    duck_type=self.name,
-                    variant=variant
-                )
-                
-                return jsonify({
-                    'success': True,
-                    'files': motion_files
-                })
-                
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'message': f'Error checking motion files: {str(e)}'
-                })
-
-# Create blueprint instance
-duck = DuckBlueprint('duck', __name__) 
+                }) 

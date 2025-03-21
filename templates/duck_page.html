@@ -190,8 +190,19 @@
                 <h3>{{ duck.name }}</h3>
                 <p>{{ duck.description }}</p>
                 
+                <div class="form-group mb-3">
+                    <label for="variant-select" class="form-label">Variant</label>
+                    <select class="form-control" id="variant-select" onchange="window.location.href = '{{ url_for(duck.type + '.duck_page') }}?variant=' + this.value">
+                        {% for variant_id, variant in variants.items() %}
+                        <option value="{{ variant_id }}" {% if variant_id == duck.variant.id %}selected{% endif %}>
+                            {{ variant.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
                 <model-viewer
-                    src="{{ duck.model_path }}"
+                    src="{{ duck.variant.model_path }}"
                     alt="{{ duck.name }} 3D Model"
                     auto-rotate
                     camera-controls
