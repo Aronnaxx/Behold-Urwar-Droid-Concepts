@@ -19,18 +19,42 @@ DUCK_TYPES = {
         'variants': {
             'v1': {
                 'name': 'Version 1',
+                'internal_name': 'open_duck_mini_v1',
                 'model_path': '/static/models/open_duck_mini_v2.glb',  # Using v2 model as placeholder
-                'description': 'The first generation of Open Duck Mini.'
+                'description': 'The first generation of Open Duck Mini.',
+                'specifications': {
+                    'weight': 0.8,  # kg
+                    'height': 0.25,  # meters
+                    'max_speed': 0.5,  # m/s
+                    'battery_life': '1 hour',
+                    'motor_type': 'Servo X1'
+                }
             },
             'v2': {
                 'name': 'Version 2',
+                'internal_name': 'open_duck_mini_v2',
                 'model_path': '/static/models/open_duck_mini_v2.glb',
-                'description': 'Second generation with improved stability and control.'
+                'description': 'Second generation with improved stability and control.',
+                'specifications': {
+                    'weight': 0.9,  # kg
+                    'height': 0.25,  # meters
+                    'max_speed': 0.7,  # m/s
+                    'battery_life': '1.5 hours',
+                    'motor_type': 'Servo X2'
+                }
             },
             'v3': {
                 'name': 'Version 3',
+                'internal_name': 'open_duck_mini_v3',
                 'model_path': '/static/models/open_duck_mini_v2.glb',  # Using v2 model as placeholder
-                'description': 'Latest generation with advanced features.'
+                'description': 'Latest generation with advanced features.',
+                'specifications': {
+                    'weight': 1.0,  # kg
+                    'height': 0.27,  # meters
+                    'max_speed': 0.8,  # m/s
+                    'battery_life': '2 hours',
+                    'motor_type': 'Servo X3'
+                }
             }
         }
     },
@@ -39,23 +63,59 @@ DUCK_TYPES = {
         'variants': {
             'go1': {
                 'name': 'Go1',
-                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
-                'description': 'BD-X Go1 variant optimized for agility.'
+                'internal_name': 'go_bdx',
+                'model_path': '/static/models/bdx.glb',
+                'description': 'BD-X Go1 variant optimized for agility.',
+                'specifications': {
+                    'weight': 12.0,  # kg
+                    'height': 0.35,  # meters
+                    'max_speed': 3.5,  # m/s
+                    'battery_life': '2.5 hours',
+                    'motor_type': 'Unitree A1',
+                    'payload_capacity': '5kg'
+                }
             },
             'go2': {
                 'name': 'Go2',
-                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
-                'description': 'BD-X Go2 with enhanced payload capacity.'
+                'internal_name': 'go2_bdx',
+                'model_path': '/static/models/bdx.glb',
+                'description': 'BD-X Go2 with enhanced payload capacity.',
+                'specifications': {
+                    'weight': 15.0,  # kg
+                    'height': 0.40,  # meters
+                    'max_speed': 3.0,  # m/s
+                    'battery_life': '3 hours',
+                    'motor_type': 'Unitree A2',
+                    'payload_capacity': '10kg'
+                }
             },
             'cybergear': {
                 'name': 'Cybergear',
-                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
-                'description': 'BD-X Cybergear featuring advanced motor control.'
+                'internal_name': 'cybergear_bdx',
+                'model_path': '/static/models/bdx.glb',
+                'description': 'BD-X Cybergear featuring advanced motor control.',
+                'specifications': {
+                    'weight': 13.5,  # kg
+                    'height': 0.38,  # meters
+                    'max_speed': 3.2,  # m/s
+                    'battery_life': '2.8 hours',
+                    'motor_type': 'CyberDyne X1',
+                    'payload_capacity': '8kg'
+                }
             },
             'servo': {
                 'name': 'Servo',
-                'model_path': '/static/models/bdx.glb',  # Using bdx.glb as placeholder
-                'description': 'BD-X Servo with precise movement control.'
+                'internal_name': 'servo_bdx',
+                'model_path': '/static/models/bdx.glb',
+                'description': 'BD-X Servo with precise movement control.',
+                'specifications': {
+                    'weight': 11.0,  # kg
+                    'height': 0.33,  # meters
+                    'max_speed': 2.8,  # m/s
+                    'battery_life': '3.2 hours',
+                    'motor_type': 'ServoTech Pro',
+                    'payload_capacity': '4kg'
+                }
             }
         }
     }

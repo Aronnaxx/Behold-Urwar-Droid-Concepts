@@ -4,21 +4,27 @@ from pathlib import Path
 import shutil
 import time
 import json
+import logging
 from typing import Tuple, Optional, List, Dict
 import tempfile
 from datetime import datetime
+import traceback
 
 class ReferenceMotionGenerationService:
     def __init__(self, workspace_root: Path):
         self.workspace_root = workspace_root
         self.submodule_dir = workspace_root / 'submodules/open_duck_reference_motion_generator'
+        self.logger = logging.getLogger(__name__)
         
-    def run_command(self, command: List[str], cwd: str) -> Tuple[str, str]:
+    def run_command(self, command: List[str], cwd: str) -> Tuple[str, str, bool]:
         """Helper function to run a shell command in the given directory."""
         try:
             if isinstance(command, list):
                 command = ' '.join(command)
                 
+            self.logger.debug(f"Running command: {command}")
+            self.logger.debug(f"Working directory: {cwd}")
+            
             result = subprocess.run(
                 command,
                 shell=True,
@@ -27,11 +33,16 @@ class ReferenceMotionGenerationService:
                 text=True,
                 check=True
             )
-            return result.stdout, result.stderr
+            return result.stdout, result.stderr, True
         except subprocess.CalledProcessError as e:
-            return e.stdout, e.stderr
+            self.logger.error(f"Command failed with exit code {e.returncode}")
+            self.logger.error(f"Command output: {e.stdout}")
+            self.logger.error(f"Command error: {e.stderr}")
+            return e.stdout, e.stderr, False
         except Exception as e:
-            return "", str(e)
+            self.logger.error(f"Exception running command: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return "", str(e), False
 
     def generate_motion(self, 
                        duck_type: str, 
@@ -39,6 +50,9 @@ class ReferenceMotionGenerationService:
                        **params) -> Tuple[bool, str, Optional[Dict]]:
         """Generate reference motions for the duck."""
         try:
+            self.logger.info(f"Starting motion generation for {duck_type} in {mode} mode")
+            self.logger.debug(f"Parameters: {params}")
+            
             output_dir = self.workspace_root / 'generated_motions' / duck_type
             output_dir.mkdir(parents=True, exist_ok=True)
             
@@ -49,6 +63,7 @@ class ReferenceMotionGenerationService:
                 (temp_dir_path / 'log').mkdir(exist_ok=True)
                 (temp_dir_path / 'tmp').mkdir(exist_ok=True)
                 
+                # Build command
                 if mode == 'auto':
                     generation_type = params.get('generation_type')
                     cmd = ['uv', 'run', '--active', 'scripts/auto_waddle.py']
@@ -86,7 +101,16 @@ class ReferenceMotionGenerationService:
                 
                 cmd.extend(['--output_dir', str(temp_dir_path)])
                 
-                stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
+                # Run motion generation command
+                stdout, stderr, success = self.run_command(cmd, str(self.submodule_dir))
+                
+                if not success:
+                    self.logger.error("Motion generation command failed")
+                    return False, "Motion generation command failed", {
+                        'command': ' '.join(cmd),
+                        'stdout': stdout,
+                        'stderr': stderr
+                    }
                 
                 log_output = []
                 if stdout:
@@ -101,7 +125,8 @@ class ReferenceMotionGenerationService:
                         log_output.append("\nErrors:")
                         log_output.extend(stderr.split('\n'))
                 
-                # Wait for motion files to be generated
+                # Wait for motion files
+                self.logger.info("Waiting for motion files to be generated...")
                 max_wait = 30
                 wait_interval = 0.5
                 waited = 0
@@ -109,18 +134,30 @@ class ReferenceMotionGenerationService:
                 while waited < max_wait:
                     motion_files = list(temp_dir_path.glob('*.json'))
                     if motion_files:
+                        self.logger.info(f"Found {len(motion_files)} motion files")
                         break
                     time.sleep(wait_interval)
                     waited += wait_interval
                 
                 if not motion_files:
+                    self.logger.error("No motion files were generated")
                     return False, "No motion files were generated after waiting 30s", {
                         'output': '\n'.join(log_output)
                     }
                 
                 # Fit polynomials
+                self.logger.info("Fitting polynomials to motion data...")
                 fit_cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + [str(f) for f in motion_files]
-                fit_stdout, fit_stderr = self.run_command(fit_cmd, str(self.submodule_dir))
+                fit_stdout, fit_stderr, fit_success = self.run_command(fit_cmd, str(self.submodule_dir))
+                
+                if not fit_success:
+                    self.logger.error("Polynomial fitting failed")
+                    return False, "Polynomial fitting failed", {
+                        'command': ' '.join(fit_cmd),
+                        'stdout': fit_stdout,
+                        'stderr': fit_stderr,
+                        'previous_output': '\n'.join(log_output)
+                    }
                 
                 if fit_stdout:
                     log_output.append("\nPolynomial Fitting Output:")
@@ -130,6 +167,7 @@ class ReferenceMotionGenerationService:
                     log_output.extend(fit_stderr.split('\n'))
                 
                 # Wait for polynomial coefficients file
+                self.logger.info("Waiting for polynomial coefficients file...")
                 waited = 0
                 pkl_file = None
                 while waited < max_wait:
@@ -143,38 +181,49 @@ class ReferenceMotionGenerationService:
                             pkl_file = loc
                             break
                     if pkl_file:
+                        self.logger.info(f"Found polynomial coefficients file at {pkl_file}")
                         break
                     time.sleep(wait_interval)
                     waited += wait_interval
                 
                 if not pkl_file:
+                    self.logger.error("No polynomial coefficients file was generated")
                     return False, "No polynomial coefficients file was generated after waiting 30s", {
                         'output': '\n'.join(log_output)
                     }
                 
-                # Create run-specific output directory
-                run_output_dir = output_dir / run_id
-                run_output_dir.mkdir(exist_ok=True)
-                
-                # Copy generated files
-                for file in motion_files:
-                    shutil.copy2(file, run_output_dir / file.name)
-                shutil.copy2(pkl_file, run_output_dir / pkl_file.name)
-                
-                # Update latest symlink
-                latest_link = self.workspace_root / 'generated_motions' / f'latest_{duck_type}'
-                if latest_link.exists():
-                    latest_link.unlink()
-                latest_link.symlink_to(run_output_dir, target_is_directory=True)
-                
-                # Copy to playground if needed
+                # Create run-specific output directory and copy files
                 try:
-                    playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / duck_type / 'data' / pkl_file.name
-                    playground_pkl_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(pkl_file, playground_pkl_path)
+                    self.logger.info("Copying generated files to output directory...")
+                    run_output_dir = output_dir / run_id
+                    run_output_dir.mkdir(exist_ok=True)
+                    
+                    for file in motion_files:
+                        shutil.copy2(file, run_output_dir / file.name)
+                    shutil.copy2(pkl_file, run_output_dir / pkl_file.name)
+                    
+                    # Update latest symlink
+                    latest_link = self.workspace_root / 'generated_motions' / f'latest_{duck_type}'
+                    if latest_link.exists():
+                        latest_link.unlink()
+                    latest_link.symlink_to(run_output_dir, target_is_directory=True)
+                    
+                    # Copy to playground if needed
+                    try:
+                        playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / duck_type / 'data' / pkl_file.name
+                        playground_pkl_path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(pkl_file, playground_pkl_path)
+                    except Exception as e:
+                        self.logger.warning(f"Error copying files to playground: {str(e)}")
+                        log_output.append(f"\nWarning: Error copying files to playground: {str(e)}")
+                    
                 except Exception as e:
-                    log_output.append(f"\nWarning: Error copying files to playground: {str(e)}")
+                    self.logger.error(f"Error copying generated files: {str(e)}")
+                    return False, f"Error copying generated files: {str(e)}", {
+                        'output': '\n'.join(log_output)
+                    }
                 
+                self.logger.info("Motion generation completed successfully")
                 return True, "Motion generation completed successfully", {
                     'output': '\n'.join(log_output),
                     'files': [str(f.name) for f in motion_files],
@@ -182,7 +231,12 @@ class ReferenceMotionGenerationService:
                 }
                 
         except Exception as e:
-            return False, f"Motion generation failed: {str(e)}", None
+            self.logger.error(f"Unexpected error in motion generation: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Motion generation failed: {str(e)}", {
+                'error': str(e),
+                'traceback': traceback.format_exc()
+            }
 
     def fit_polynomials(self, motion_files: List[str]) -> Tuple[bool, str, Optional[str]]:
         """Fit polynomials to reference motion data."""

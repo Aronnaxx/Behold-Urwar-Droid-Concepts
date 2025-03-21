@@ -6,6 +6,7 @@ from .config import Config, OUTPUT_DIR, TRAINED_MODELS_DIR, DUCK_TYPES
 from .routes.main import main
 from .routes.duck import DuckBlueprint
 from .routes.routes import DuckRoutes
+import logging
 
 def create_app(config_class=Config):
     """Create and configure the Flask application."""
@@ -48,6 +49,12 @@ def create_app(config_class=Config):
     # Register duck blueprints
     app.register_blueprint(open_duck_mini)
     app.register_blueprint(bdx)
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+    )
     
     # Initialize API routes
     DuckRoutes(app)

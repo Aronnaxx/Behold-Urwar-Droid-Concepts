@@ -1,9 +1,10 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, url_for
 from pathlib import Path
 from ..services.open_duck_mini_playground import OpenDuckPlaygroundService
 from ..services.awd import AWDService
 from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
+from ..config import DUCK_TYPES
 
 class DuckRoutes:
     """Class to handle all duck-related routes."""
@@ -21,6 +22,18 @@ class DuckRoutes:
         # Register routes
         self.register_routes()
         
+    def get_internal_duck_type(self, duck_type, variant=None):
+        """Get the internal duck type name based on the URL path and variant."""
+        if duck_type not in DUCK_TYPES:
+            return None
+            
+        if variant and variant in DUCK_TYPES[duck_type]['variants']:
+            return DUCK_TYPES[duck_type]['variants'][variant]['internal_name']
+        
+        # If no variant specified, use the first variant's internal name as default
+        first_variant = next(iter(DUCK_TYPES[duck_type]['variants'].values()))
+        return first_variant['internal_name']
+        
     def register_routes(self):
         """Register all routes for the application."""
         
@@ -30,19 +43,24 @@ class DuckRoutes:
             try:
                 data = request.get_json()
                 duck_type = data.get('duck_type')
+                variant = data.get('variant')
                 num_envs = data.get('num_envs', 1)
                 motion_file = data.get('motion_file')
                 framework = data.get('framework', 'playground')  # or 'awd'
                 
+                internal_duck_type = self.get_internal_duck_type(duck_type, variant)
+                if not internal_duck_type:
+                    return jsonify({'success': False, 'error': 'Invalid duck type or variant'}), 400
+                
                 if framework == 'playground':
                     success, message, output = self.playground_service.train_model(
-                        duck_type=duck_type,
+                        duck_type=internal_duck_type,
                         num_envs=num_envs,
                         motion_file=motion_file
                     )
                 else:
                     success, message, output = self.awd_service.train_model(
-                        duck_type=duck_type,
+                        duck_type=internal_duck_type,
                         num_envs=num_envs,
                         motion_file=motion_file
                     )
@@ -54,37 +72,81 @@ class DuckRoutes:
                 })
                 
             except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'message': f'Error starting training: {str(e)}'
-                })
+                return jsonify({'success': False, 'error': str(e)}), 500
                 
         # Motion generation routes
-        @self.app.route('/api/generate_motion', methods=['POST'])
+        @self.app.route('/<duck_type>/generate_motion', methods=['POST'])
         def generate_motion():
             try:
-                data = request.get_json()
-                duck_type = data.get('duck_type')
+                data = request.form.to_dict()
+                variant = request.args.get('variant')
                 mode = data.get('mode', 'auto')
-                params = data.get('params', {})
                 
-                success, message, output = self.motion_service.generate_motion(
-                    duck_type=duck_type,
+                # Log incoming request
+                current_app.logger.debug(f"Motion generation request - Duck: {duck_type}, Variant: {variant}, Mode: {mode}")
+                current_app.logger.debug(f"Parameters: {data}")
+                
+                # Get internal name from config
+                if duck_type not in DUCK_TYPES or variant not in DUCK_TYPES[duck_type]['variants']:
+                    error_msg = f"Invalid duck type ({duck_type}) or variant ({variant})"
+                    current_app.logger.error(error_msg)
+                    return jsonify({
+                        'success': False,
+                        'error': error_msg,
+                        'details': {
+                            'duck_type': duck_type,
+                            'variant': variant,
+                            'available_types': list(DUCK_TYPES.keys())
+                        }
+                    }), 400
+
+                internal_name = DUCK_TYPES[duck_type]['variants'][variant]['internal_name']
+                current_app.logger.info(f"Using internal name: {internal_name}")
+                
+                success, message, motion_data = self.motion_service.generate_motion(
+                    duck_type=internal_name,
                     mode=mode,
-                    **params
+                    **data
                 )
                 
+                if not success:
+                    current_app.logger.error(f"Motion generation failed: {message}")
+                    if motion_data and isinstance(motion_data, dict):
+                        current_app.logger.error(f"Detailed output: {motion_data}")
+                        return jsonify({
+                            'success': False,
+                            'error': message,
+                            'details': motion_data
+                        }), 500
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'error': message,
+                            'details': {
+                                'error': str(motion_data) if motion_data else 'No additional details available'
+                            }
+                        }), 500
+                
+                current_app.logger.info(f"Motion generation successful: {message}")
                 return jsonify({
-                    'success': success,
+                    'success': True,
                     'message': message,
-                    'output': output
+                    'motion_data': motion_data
                 })
                 
             except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                current_app.logger.error(f"Unexpected error in motion generation: {str(e)}")
+                current_app.logger.error(f"Traceback: {error_details}")
                 return jsonify({
-                    'success': False,
-                    'message': f'Error generating motion: {str(e)}'
-                })
+                    'success': False, 
+                    'error': str(e),
+                    'details': {
+                        'traceback': error_details,
+                        'error': str(e)
+                    }
+                }), 500
                 
         # Deployment routes
         @self.app.route('/api/deploy', methods=['POST'])
