@@ -10,6 +10,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const logOutput = document.querySelector('.log-output');
     const downloadButton = document.getElementById('download-motion');
     let currentMotionData = null;
+    
+    // Find the generate motion button
+    const generateMotionButton = form ? form.querySelector('button[type="submit"]') : null;
+    
+    if (generateMotionButton) {
+        console.log("DEBUG: Found generate motion button:", generateMotionButton);
+    } else {
+        console.error("DEBUG: Could not find generate motion button in the form!");
+    }
 
     // Get the current duck type from the URL
     function getCurrentDuckType() {
@@ -29,33 +38,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const variant = urlParams.get('variant');
             console.log("DEBUG: URL params variant:", variant);
             
-            // Map to internal duck type based on URL path
-            if (urlDuckType === 'bdx') {
-                // Map to correct internal name based on variant
-                const internalType = variant === 'go2' ? 'go2_bdx' : 
-                                    variant === 'cybergear' ? 'cybergear_bdx' : 
-                                    variant === 'servo' ? 'servo_bdx' : 'go_bdx';
-                
-                console.log("DEBUG: Mapped bdx to internal name:", internalType);
-                return internalType;
-            }
+            // NOTE: We no longer need to map to internal duck type in JS
+            // The server will handle the mapping from URL path to internal type
             
-            if (urlDuckType === 'open_duck_mini') {
-                // Map to correct internal name based on variant
-                const internalType = variant === 'v1' ? 'open_duck_mini_v1' : 
-                                    variant === 'v3' ? 'open_duck_mini_v3' : 'open_duck_mini_v2';
-                
-                console.log("DEBUG: Mapped open_duck_mini to internal name:", internalType);
-                return internalType;
-            }
-            
-            // If we get here, just return the URL path as is
-            console.log("DEBUG: Using path as duck type:", urlDuckType);
+            // Return the URL path duck type (not internal name)
             return urlDuckType;
         }
         
-        console.log("DEBUG: No duck type in path, using default: open_duck_mini_v2");
-        return 'open_duck_mini_v2';
+        console.log("DEBUG: No duck type in path, using default: open_duck_mini");
+        return 'open_duck_mini';
     }
 
     // Initialize UI state
@@ -74,19 +65,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const duckType = getCurrentDuckType();
         // Log initial state
         console.log("DEBUG: UI initialized. Duck type:", duckType);
+        
+        // Add direct click handler to generate motion button for debugging
+        if (generateMotionButton) {
+            console.log("DEBUG: Adding click handler to generate motion button");
+            generateMotionButton.addEventListener('click', function(e) {
+                console.log("DEBUG: Generate motion button clicked directly");
+                
+                // Only do manual submission if not already being handled by form submit
+                if (!window.motionSubmissionInProgress) {
+                    console.log("DEBUG: Manually triggering form submission via direct button handler");
+                    submitMotionForm();
+                }
+            });
+        }
     }
 
-    // Handle form submission
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        console.log("DEBUG: Form submitted");
-        
-        // Reset UI
-        progressBar.style.width = '0%';
-        logOutput.innerHTML = '';
-        previewSection.style.display = 'none';
+    // Extract form submission logic to a separate function for reuse
+    async function submitMotionForm() {
+        // Set flag to prevent duplicate submissions
+        window.motionSubmissionInProgress = true;
         
         try {
+            console.log("DEBUG: Beginning motion form submission function");
+            // Reset UI
+            progressBar.style.width = '0%';
+            logOutput.innerHTML = '';
+            previewSection.style.display = 'none';
+            
             // Show progress
             progressBar.style.width = '20%';
             addLogEntry('Preparing motion generation request...');
@@ -97,15 +103,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Get form values and log them
             const formData = new FormData(form);
-            const duckType = getCurrentDuckType();
+            const duckType = getCurrentDuckType(); // Get duck type from URL
             
             console.log(`DEBUG: Generating motion for duck type: ${duckType}, variant: ${variant}`);
-            console.log("DEBUG: Form data being submitted:");
+            console.log("DEBUG: Form data being submitted (key-value pairs):");
             for (let [key, value] of formData.entries()) {
                 console.log(`${key}: ${value}`);
             }
             
-            // Extract the URL path part (not the internal name)
+            // Extract the URL path part
             const urlPath = window.location.pathname.split('/').filter(p => p)[0] || 'open_duck_mini';
             console.log("DEBUG: URL path for request:", urlPath);
             
@@ -117,10 +123,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const url = `/${urlPath}/generate_motion${variant ? `?variant=${variant}` : ''}`;
             console.log("DEBUG: Submitting to URL:", url);
             
+            // Log right before fetch to see if we get this far
+            console.log("DEBUG: About to execute fetch request to:", url);
+            
             const response = await fetch(url, {
                 method: 'POST',
                 body: formData
             });
+            
+            console.log("DEBUG: Fetch request completed");
             
             // Log response status
             console.log("DEBUG: Server response status:", response.status);
@@ -178,12 +189,25 @@ document.addEventListener('DOMContentLoaded', function() {
             
             progressBar.style.width = '100%';
             addLogEntry('Process completed successfully', 'success');
-            
         } catch (error) {
             console.error("DEBUG: Error in motion generation:", error);
             progressBar.style.width = '100%';
             addLogEntry(`Error: ${error.message}`, 'error');
+        } finally {
+            // Reset submission flag
+            window.motionSubmissionInProgress = false;
         }
+    }
+
+    // Handle form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log("DEBUG: Form submitted - START OF SUBMIT HANDLER");
+        console.log("DEBUG: Form element:", form);
+        console.log("DEBUG: Button that triggered submit:", document.activeElement);
+        
+        // Use the shared submission function
+        await submitMotionForm();
     });
 
     // Handle motion download

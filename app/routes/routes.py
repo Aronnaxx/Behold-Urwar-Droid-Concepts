@@ -76,20 +76,25 @@ class DuckRoutes:
                 
         # Motion generation routes
         @self.app.route('/<duck_type>/generate_motion', methods=['POST'])
-        def generate_motion():
+        def generate_motion(duck_type):
             try:
                 data = request.form.to_dict()
                 variant = request.args.get('variant')
                 mode = data.get('mode', 'auto')
                 
-                # Log incoming request
-                current_app.logger.debug(f"Motion generation request - Duck: {duck_type}, Variant: {variant}, Mode: {mode}")
-                current_app.logger.debug(f"Parameters: {data}")
+                # Enhanced logging
+                current_app.logger.info(f"Motion generation request received - Duck type: {duck_type}, Variant: {variant}, Mode: {mode}")
+                current_app.logger.debug(f"Request form data: {data}")
+                current_app.logger.debug(f"Request args: {request.args}")
+                current_app.logger.debug(f"Request headers: {dict(request.headers)}")
                 
                 # Get internal name from config
                 if duck_type not in DUCK_TYPES or variant not in DUCK_TYPES[duck_type]['variants']:
                     error_msg = f"Invalid duck type ({duck_type}) or variant ({variant})"
                     current_app.logger.error(error_msg)
+                    current_app.logger.debug(f"Available duck types: {DUCK_TYPES.keys()}")
+                    if duck_type in DUCK_TYPES:
+                        current_app.logger.debug(f"Available variants for {duck_type}: {DUCK_TYPES[duck_type]['variants'].keys()}")
                     return jsonify({
                         'success': False,
                         'error': error_msg,
@@ -101,10 +106,15 @@ class DuckRoutes:
                     }), 400
 
                 internal_name = DUCK_TYPES[duck_type]['variants'][variant]['internal_name']
-                current_app.logger.info(f"Using internal name: {internal_name}")
+                current_app.logger.info(f"Using internal duck name: {internal_name} (from {duck_type}:{variant})")
+                
+                # Log parameters being passed to the service
+                service_params = data.copy()
+                current_app.logger.debug(f"Calling motion_service.generate_motion with params: duck_type={internal_name}, mode={mode}, **{service_params}")
                 
                 success, message, motion_data = self.motion_service.generate_motion(
                     duck_type=internal_name,
+                    variant=variant,
                     mode=mode,
                     **data
                 )

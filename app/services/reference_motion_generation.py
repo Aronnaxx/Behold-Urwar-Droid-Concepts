@@ -54,6 +54,18 @@ class ReferenceMotionGenerationService:
             self.logger.info(f"Starting motion generation for {duck_type} (variant: {variant}) in {mode} mode")
             self.logger.debug(f"Parameters received: {params}")
             
+            # Add more detailed parameter logging
+            self.logger.info("----- Motion Generation Parameters -----")
+            self.logger.info(f"Duck Type: {duck_type}")
+            self.logger.info(f"Variant: {variant}")
+            self.logger.info(f"Mode: {mode}")
+            
+            # Log all parameters with their types
+            for key, value in params.items():
+                self.logger.info(f"Parameter: {key} = {value} (type: {type(value).__name__})")
+            
+            self.logger.info("---------------------------------------")
+            
             output_dir = self.workspace_root / 'generated_motions' / duck_type
             output_dir.mkdir(parents=True, exist_ok=True)
             
@@ -73,7 +85,18 @@ class ReferenceMotionGenerationService:
                     self.logger.debug(f"Auto mode with generation type: {generation_type}")
                     
                     cmd = ['uv', 'run', '--active', 'scripts/auto_waddle.py']
+                    
+                    # IMPORTANT: Use the internal duck_type name which is expected by the script
+                    # Validate that duck_type is one of the allowed values
+                    valid_duck_types = ['go_bdx', 'open_duck_mini', 'open_duck_mini_v2', 'open_duck_mini_v1', 'open_duck_mini_v3', 'cybergear_bdx', 'servo_bdx', 'go2_bdx']
+                    if duck_type not in valid_duck_types:
+                        self.logger.warning(f"Invalid duck type '{duck_type}'. Must be one of: {valid_duck_types}")
+                        return False, f"Invalid duck type: {duck_type}", {
+                            'error': f"Duck type must be one of: {valid_duck_types}, not {duck_type}"
+                        }
+                    
                     cmd.extend(['--duck', duck_type])
+                    self.logger.info(f"Using duck type '{duck_type}' for auto_waddle.py script")
                     
                     if generation_type == 'sweep':
                         self.logger.debug("Using sweep generation")
@@ -88,6 +111,8 @@ class ReferenceMotionGenerationService:
                 else:
                     self.logger.debug("Using advanced mode with gait generator")
                     cmd = ['uv', 'run', '--active', 'open_duck_reference_motion_generator/gait_generator.py']
+                    
+                    # Also use the internal duck_type name for gait_generator.py
                     cmd.extend(['--duck', duck_type])
                     cmd.extend(['--name', f'motion_{run_id}'])
                     
@@ -113,8 +138,12 @@ class ReferenceMotionGenerationService:
                 
                 cmd.extend(['--output_dir', str(temp_dir_path)])
                 
+                # More detailed command logging
                 self.logger.info(f"Executing command: {' '.join(cmd)}")
+                self.logger.debug(f"Command as list: {cmd}")
                 self.logger.debug(f"Working directory: {self.submodule_dir}")
+                self.logger.debug(f"Duck type: {duck_type}")
+                self.logger.debug(f"Temp directory: {temp_dir_path}")
                 
                 # Run motion generation command
                 stdout, stderr, success = self.run_command(cmd, str(self.submodule_dir))

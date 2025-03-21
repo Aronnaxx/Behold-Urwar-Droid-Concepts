@@ -770,5 +770,106 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log("DEBUG-HTML: Duck page initialization complete");
 });
+
+// Direct script to handle the Generate Motion button
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DEBUG-HTML: Direct button handler initialization");
+    
+    // Find the generate motion button
+    const generateButton = document.querySelector('#motion-form button[type="submit"]');
+    if (generateButton) {
+        console.log("DEBUG-HTML: Found Generate Motion button:", generateButton);
+        
+        generateButton.addEventListener('click', async function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Generate Motion button clicked directly");
+            
+            try {
+                // Get form data and URL info
+                const form = document.getElementById('motion-form');
+                const formData = new FormData(form);
+                
+                // Get duck type from URL
+                const pathParts = window.location.pathname.split('/').filter(p => p);
+                const duckType = pathParts.length > 0 ? pathParts[0] : 'open_duck_mini';
+                
+                // Get variant from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const variant = urlParams.get('variant');
+                
+                console.log(`DEBUG-HTML: Generating motion for ${duckType}, variant: ${variant}`);
+                console.log("DEBUG-HTML: Form data:");
+                for (let [key, value] of formData.entries()) {
+                    console.log(`  ${key}: ${value}`);
+                }
+                
+                // Show progress in UI
+                const progressBar = document.querySelector('.progress-bar');
+                const logOutput = document.querySelector('.log-output');
+                if (progressBar) progressBar.style.width = '20%';
+                if (logOutput) {
+                    logOutput.innerHTML = '<div class="log-entry">Starting motion generation process...</div>';
+                }
+                
+                // Create the URL for the request
+                const url = `/${duckType}/generate_motion${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Submitting to URL:", url);
+                
+                // Execute fetch request
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log("DEBUG-HTML: Response status:", response.status);
+                if (progressBar) progressBar.style.width = '60%';
+                
+                // Process response
+                const data = await response.json();
+                console.log("DEBUG-HTML: Response data:", data);
+                
+                // Update UI with result
+                if (logOutput) {
+                    if (data.success) {
+                        if (progressBar) progressBar.style.width = '100%';
+                        logOutput.innerHTML += '<div class="log-entry success">Motion generated successfully!</div>';
+                        
+                        if (data.motion_data && data.motion_data.output) {
+                            logOutput.innerHTML += '<div class="log-entry info">Command output:</div>';
+                            logOutput.innerHTML += `<div class="log-entry code"><pre>${data.motion_data.output}</pre></div>`;
+                        }
+                    } else {
+                        if (progressBar) progressBar.style.width = '100%';
+                        const errorMessage = data.error || 'Unknown error occurred';
+                        logOutput.innerHTML += `<div class="log-entry error">Error: ${errorMessage}</div>`;
+                        
+                        if (data.details) {
+                            if (data.details.output) {
+                                logOutput.innerHTML += '<div class="log-entry info">Command output:</div>';
+                                logOutput.innerHTML += `<div class="log-entry code"><pre>${data.details.output}</pre></div>`;
+                            }
+                            if (data.details.traceback) {
+                                logOutput.innerHTML += '<div class="log-entry info">Error traceback:</div>';
+                                logOutput.innerHTML += `<div class="log-entry code"><pre>${data.details.traceback}</pre></div>`;
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error("DEBUG-HTML: Error in motion generation:", error);
+                const logOutput = document.querySelector('.log-output');
+                const progressBar = document.querySelector('.progress-bar');
+                
+                if (progressBar) progressBar.style.width = '100%';
+                if (logOutput) {
+                    logOutput.innerHTML += `<div class="log-entry error">Error: ${error.message}</div>`;
+                }
+            }
+        });
+    } else {
+        console.error("DEBUG-HTML: Generate Motion button not found!");
+    }
+});
 </script>
 {% endblock %} 
