@@ -61,9 +61,6 @@ class ReferenceMotionGenerationService:
                 
                 self.logger.debug(f"Created temporary directory: {temp_dir_path}")
                 
-                # Use duck_type directly as it should already be the internal name from routes.py
-                script_duck_type = duck_type
-                
                 # Build command
                 if mode == 'auto':
                     generation_type = params.get('generation_type')
@@ -72,8 +69,8 @@ class ReferenceMotionGenerationService:
                     cmd = ['uv', 'run', '--active', 'scripts/auto_waddle.py']
                     
                     # Use the internal duck_type name which is expected by the script
-                    cmd.extend(['--duck', script_duck_type])
-                    self.logger.info(f"Using duck type '{script_duck_type}' for auto_waddle.py script")
+                    cmd.extend(['--duck', duck_type])
+                    self.logger.info(f"Using duck type '{duck_type}' for auto_waddle.py script")
                     
                     if generation_type == 'sweep':
                         self.logger.debug("Using sweep generation")
@@ -176,7 +173,14 @@ class ReferenceMotionGenerationService:
                 
                 # Fit polynomials
                 self.logger.info("Fitting polynomials to motion data...")
-                fit_cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + [str(f) for f in motion_files]
+                # fit_cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + [str(f) for f in motion_files]
+
+
+                # Get highest numbered motion file
+                # TODO: ask if this is correct 
+                highest_num = max(int(f.name.split('_')[0]) for f in motion_files)
+                fit_cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + [str(f) for f in motion_files if f.name.startswith(f'{highest_num}_')]
+
                 self.logger.debug(f"Executing fit command: {' '.join(fit_cmd)}")
                 
                 fit_stdout, fit_stderr, fit_success = run_command(fit_cmd, str(self.submodule_dir), logger=self.logger)
