@@ -1,0 +1,33 @@
+{
+    "name": "Open Duck Mini",
+    "id": "open_duck_mini",
+    "description": "A family of small, agile duck robots.",
+    "variants": {
+        "v1": {
+            "name": "Version 1",
+            "internal_name": "open_duck_mini_v1",
+            "model_path": "/static/models/open_duck_mini_v2.glb",
+            "description": "The first generation of Open Duck Mini",
+            "specifications": {
+                "weight": 0.8,
+                "height": 0.25,
+                "max_speed": 0.5,
+                "battery_life": "1 hour",
+                "motor_type": "Servo"
+            }
+        },
+        "v2": {
+            "name": "Version 2",
+            "internal_name": "open_duck_mini_v2",
+            "model_path": "/static/models/open_duck_mini_v2.glb",
+            "description": "Second generation with improved stability and control, using more cost effective and readily available parts.",
+            "specifications": {
+                "weight": 0.9,
+                "height": 0.25,
+                "max_speed": 0.7,
+                "battery_life": "1.5 hours",
+                "motor_type": "Servo"
+            }
+        }
+    }
+} 

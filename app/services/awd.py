@@ -2,88 +2,195 @@ import subprocess
 import os
 from pathlib import Path
 import shutil
+import logging
 from typing import Tuple, Optional, List, Dict
-import json
+from datetime import datetime
+import traceback
+from ..config import duck_config
+from ..utils.command import run_command
 
 class AWDService:
     def __init__(self, workspace_root: Path):
         self.workspace_root = workspace_root
         self.submodule_dir = workspace_root / 'submodules/awd'
+        self.logger = logging.getLogger(__name__)
         
-    def run_command(self, command: List[str], cwd: str) -> Tuple[str, str]:
-        """Helper function to run a shell command in the given directory."""
+    def train_model(self, duck_type: str, num_envs: int = 2048, motion_file: str = None) -> Tuple[bool, str, Optional[Dict]]:
+        """Train a model using Active Whole-Body Control for Humanoids (AWD)."""
         try:
-            if isinstance(command, list):
-                command = ' '.join(command)
-                
-            result = subprocess.run(
-                command,
-                shell=True,
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                check=True
+            self.logger.info(f"Starting AWD training for {duck_type} with {num_envs} environments")
+            
+            # Validate duck type with duck_config
+            duck_info = duck_config.get_config_by_internal_name(duck_type)
+            if duck_info:
+                self.logger.info(f"Found duck configuration for internal name {duck_type}")
+                self.logger.debug(f"Duck Type: {duck_info['duck_type']}, Variant: {duck_info['variant']}")
+            else:
+                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+                # Continue with the original duck_type
+
+            # Prepare output directory
+            run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = self.workspace_root / 'trained_models' / duck_type / f"awd_{run_id}"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Build command
+            cmd = ['uv', 'run', '--active', 'awd/train.py']
+            cmd.extend(['--duck_type', duck_type])
+            cmd.extend(['--num_envs', str(num_envs)])
+            
+            if motion_file:
+                motion_path = self.workspace_root / motion_file
+                if not motion_path.exists():
+                    return False, f"Motion file not found: {motion_file}", None
+                cmd.extend(['--motion_file', str(motion_path)])
+            
+            # Add output directory
+            cmd.extend(['--output_dir', str(output_dir)])
+            
+            # Log command
+            self.logger.info(f"Executing command: {' '.join(cmd)}")
+            self.logger.debug(f"Working directory: {self.submodule_dir}")
+            
+            # Run training command
+            stdout, stderr, success = run_command(
+                cmd, 
+                str(self.submodule_dir),
+                logger=self.logger
             )
-            return result.stdout, result.stderr
-        except subprocess.CalledProcessError as e:
-            return e.stdout, e.stderr
+            
+            if not success:
+                self.logger.error("AWD training command failed")
+                return False, "AWD training command failed", {
+                    'command': ' '.join(cmd),
+                    'stdout': stdout,
+                    'stderr': stderr
+                }
+            
+            # Prepare output
+            training_output = {
+                'command': ' '.join(cmd),
+                'stdout': stdout,
+                'stderr': stderr,
+                'output_dir': str(output_dir),
+                'model_files': []
+            }
+            
+            # Get list of generated model files
+            for model_file in output_dir.glob('*.pth'):
+                training_output['model_files'].append(str(model_file.name))
+            
+            # Create latest symlink
+            latest_link = self.workspace_root / 'trained_models' / duck_type / 'latest_awd'
+            if latest_link.exists():
+                latest_link.unlink()
+            latest_link.symlink_to(output_dir, target_is_directory=True)
+            
+            return True, "AWD training completed successfully", training_output
+            
         except Exception as e:
-            return "", str(e)
-
-    def train_model(self, 
-                   duck_type: str, 
-                   num_envs: int,
-                   motion_file: str,
-                   task: str = "DucklingCommand") -> Tuple[bool, str, Optional[str]]:
-        """Train a model using AWD."""
+            self.logger.error(f"Error in AWD training: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Error in AWD training: {str(e)}", None
+            
+    def test_model(self, duck_type: str, model_path: str) -> Tuple[bool, str, Optional[Dict]]:
+        """Test a trained AWD model."""
         try:
-            cmd = [
-                'python', 'awd/run.py',
-                '--task', task,
-                '--num_envs', str(num_envs),
-                '--cfg_env', f'awd/data/cfg/{duck_type}/duckling_command.yaml',
-                '--cfg_train', f'awd/data/cfg/{duck_type}/train/amp_duckling_task.yaml',
-                '--motion_file', motion_file
-            ]
+            self.logger.info(f"Testing AWD model for duck type {duck_type}: {model_path}")
             
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
+            # Validate duck type with duck_config
+            duck_info = duck_config.get_config_by_internal_name(duck_type)
+            if duck_info:
+                self.logger.info(f"Found duck configuration for internal name {duck_type}")
+            else:
+                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
             
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
-                return False, "Training failed", stderr
+            # Check if model file exists
+            model_file = Path(model_path)
+            if not model_file.exists():
+                return False, f"Model file not found: {model_path}", None
                 
-            return True, "Training started successfully", stdout
+            # Build command
+            cmd = ['uv', 'run', '--active', 'awd/test.py']
+            cmd.extend(['--duck_type', duck_type])
+            cmd.extend(['--model', str(model_file)])
+            
+            # Run test command
+            stdout, stderr, success = run_command(
+                cmd, 
+                str(self.submodule_dir),
+                logger=self.logger
+            )
+            
+            if not success:
+                self.logger.error("AWD testing command failed")
+                return False, "AWD testing command failed", {
+                    'command': ' '.join(cmd),
+                    'stdout': stdout,
+                    'stderr': stderr
+                }
+                
+            return True, "AWD testing completed successfully", {
+                'command': ' '.join(cmd),
+                'stdout': stdout,
+                'stderr': stderr
+            }
             
         except Exception as e:
-            return False, f"Error starting training: {str(e)}", None
-
-    def test_model(self,
-                  duck_type: str,
-                  num_envs: int,
-                  motion_file: str,
-                  checkpoint: str,
-                  task: str = "DucklingCommand") -> Tuple[bool, str, Optional[str]]:
-        """Test a trained model."""
+            self.logger.error(f"Error testing AWD model: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Error testing AWD model: {str(e)}", None
+            
+    def export_model(self, model_path: str, export_format: str = 'onnx') -> Tuple[bool, str, Optional[Dict]]:
+        """Export a trained model to a specified format."""
         try:
-            cmd = [
-                'python', 'awd/run.py',
-                '--test',
-                '--task', task,
-                '--num_envs', str(num_envs),
-                '--cfg_env', f'awd/data/cfg/{duck_type}/duckling_command.yaml',
-                '--cfg_train', f'awd/data/cfg/{duck_type}/train/amp_duckling_task.yaml',
-                '--motion_file', motion_file,
-                '--checkpoint', checkpoint
-            ]
+            self.logger.info(f"Exporting model {model_path} to {export_format} format")
             
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
-            
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
-                return False, "Testing failed", stderr
+            # Check if model file exists
+            model_file = Path(model_path)
+            if not model_file.exists():
+                return False, f"Model file not found: {model_path}", None
                 
-            return True, "Testing started successfully", stdout
+            # Create export directory
+            export_dir = model_file.parent / 'exports'
+            export_dir.mkdir(exist_ok=True)
+            
+            # Build command
+            cmd = ['uv', 'run', '--active', 'awd/export.py']
+            cmd.extend(['--model', str(model_file)])
+            cmd.extend(['--format', export_format])
+            cmd.extend(['--output_dir', str(export_dir)])
+            
+            # Run export command
+            stdout, stderr, success = run_command(
+                cmd, 
+                str(self.submodule_dir),
+                logger=self.logger
+            )
+            
+            if not success:
+                self.logger.error("Model export command failed")
+                return False, "Model export command failed", {
+                    'command': ' '.join(cmd),
+                    'stdout': stdout,
+                    'stderr': stderr
+                }
+                
+            # Get list of exported files
+            exported_files = list(export_dir.glob(f'*.{export_format}'))
+            
+            return True, f"Model exported successfully to {export_format}", {
+                'command': ' '.join(cmd),
+                'stdout': stdout,
+                'stderr': stderr,
+                'export_dir': str(export_dir),
+                'exported_files': [str(f.name) for f in exported_files]
+            }
             
         except Exception as e:
-            return False, f"Error starting testing: {str(e)}", None
+            self.logger.error(f"Error exporting model: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Error exporting model: {str(e)}", None
 
     def view_urdf(self, 
                  urdf_path: str,

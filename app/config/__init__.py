@@ -1,9 +1,12 @@
 from pathlib import Path
-from datetime import datetime
-from .config import duck_config
+import os
+import importlib.util
 
-# Base paths
-ROOT_DIR = Path(__file__).parent.parent
+# Re-export the DuckConfig class and instance
+from .duck_config import DuckConfig, duck_config
+
+# Base paths and default configurations
+ROOT_DIR = Path(__file__).parent.parent.parent
 OUTPUT_DIR = ROOT_DIR / 'output'
 TRAINED_MODELS_DIR = ROOT_DIR / 'trained_models'
 GENERATED_MOTIONS_DIR = ROOT_DIR / 'generated_motions'
@@ -12,10 +15,6 @@ GENERATED_MOTIONS_DIR = ROOT_DIR / 'generated_motions'
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TRAINED_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 GENERATED_MOTIONS_DIR.mkdir(parents=True, exist_ok=True)
-
-# Duck types can now be accessed via duck_config.get_duck_types()
-# For backwards compatibility, we'll create a DUCK_TYPES constant
-DUCK_TYPES = duck_config.get_duck_types()
 
 # Directory Paths
 PLAYGROUND_DIR = Path('submodules/open_duck_playground')

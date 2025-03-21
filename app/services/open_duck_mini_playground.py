@@ -2,33 +2,147 @@ import subprocess
 import os
 from pathlib import Path
 import shutil
-from typing import Tuple, Optional, List
+import time
+import json
+import logging
+from typing import Tuple, Optional, List, Dict
+import tempfile
+from datetime import datetime
+import traceback
+from ..config import duck_config
+from ..utils.command import run_command
 
 class OpenDuckPlaygroundService:
     def __init__(self, workspace_root: Path):
         self.workspace_root = workspace_root
-        self.playground_process = None
         self.submodule_dir = workspace_root / 'submodules/open_duck_playground'
-
-    def run_command(self, command: List[str], cwd: str) -> Tuple[str, str]:
-        """Helper function to run a shell command in the given directory."""
+        self.logger = logging.getLogger(__name__)
+        
+    def train_model(self, duck_type: str, num_envs: int = 2048, motion_file: str = None) -> Tuple[bool, str, Optional[Dict]]:
+        """Train a model using the Open Duck Mini Playground."""
         try:
-            if isinstance(command, list):
-                command = ' '.join(command)
-                
-            result = subprocess.run(
-                command,
-                shell=True,
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                check=True
+            self.logger.info(f"Starting training for {duck_type} with {num_envs} environments")
+            
+            # Validate duck type with duck_config
+            duck_info = duck_config.get_config_by_internal_name(duck_type)
+            if duck_info:
+                self.logger.info(f"Found duck configuration for internal name {duck_type}")
+                self.logger.debug(f"Duck Type: {duck_info['duck_type']}, Variant: {duck_info['variant']}")
+            else:
+                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+                # Continue with the original duck_type
+
+            # Prepare temp directory
+            run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = self.workspace_root / 'trained_models' / duck_type / run_id
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Build command
+            cmd = ['uv', 'run', '--active', 'train.py']
+            cmd.extend(['--type', duck_type])
+            cmd.extend(['--num_envs', str(num_envs)])
+            
+            if motion_file:
+                motion_path = self.workspace_root / motion_file
+                if not motion_path.exists():
+                    return False, f"Motion file not found: {motion_file}", None
+                cmd.extend(['--motion_file', str(motion_path)])
+            
+            # Add output directory
+            cmd.extend(['--output_dir', str(output_dir)])
+            
+            # Log command
+            self.logger.info(f"Executing command: {' '.join(cmd)}")
+            self.logger.debug(f"Working directory: {self.submodule_dir}")
+            
+            # Run training command
+            stdout, stderr, success = run_command(
+                cmd, 
+                str(self.submodule_dir),
+                logger=self.logger
             )
-            return result.stdout, result.stderr
-        except subprocess.CalledProcessError as e:
-            return e.stdout, e.stderr
+            
+            if not success:
+                self.logger.error("Training command failed")
+                return False, "Training command failed", {
+                    'command': ' '.join(cmd),
+                    'stdout': stdout,
+                    'stderr': stderr
+                }
+            
+            # Prepare output
+            training_output = {
+                'command': ' '.join(cmd),
+                'stdout': stdout,
+                'stderr': stderr,
+                'output_dir': str(output_dir),
+                'model_files': []
+            }
+            
+            # Get list of generated model files
+            for model_file in output_dir.glob('*.pth'):
+                training_output['model_files'].append(str(model_file.name))
+            
+            # Create latest symlink
+            latest_link = self.workspace_root / 'trained_models' / duck_type / 'latest'
+            if latest_link.exists():
+                latest_link.unlink()
+            latest_link.symlink_to(output_dir, target_is_directory=True)
+            
+            return True, "Training completed successfully", training_output
+            
         except Exception as e:
-            return "", str(e)
+            self.logger.error(f"Error training model: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Error training model: {str(e)}", None
+            
+    def test_model(self, duck_type: str, model_path: str) -> Tuple[bool, str, Optional[Dict]]:
+        """Test a trained model."""
+        try:
+            self.logger.info(f"Testing model for duck type {duck_type}: {model_path}")
+            
+            # Validate duck type with duck_config
+            duck_info = duck_config.get_config_by_internal_name(duck_type)
+            if duck_info:
+                self.logger.info(f"Found duck configuration for internal name {duck_type}")
+            else:
+                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+            
+            # Check if model file exists
+            model_file = Path(model_path)
+            if not model_file.exists():
+                return False, f"Model file not found: {model_path}", None
+                
+            # Build command
+            cmd = ['uv', 'run', '--active', 'test.py']
+            cmd.extend(['--type', duck_type])
+            cmd.extend(['--model', str(model_file)])
+            
+            # Run test command
+            stdout, stderr, success = run_command(
+                cmd, 
+                str(self.submodule_dir),
+                logger=self.logger
+            )
+            
+            if not success:
+                self.logger.error("Testing command failed")
+                return False, "Testing command failed", {
+                    'command': ' '.join(cmd),
+                    'stdout': stdout,
+                    'stderr': stderr
+                }
+                
+            return True, "Testing completed successfully", {
+                'command': ' '.join(cmd),
+                'stdout': stdout,
+                'stderr': stderr
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error testing model: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Error testing model: {str(e)}", None
 
     def check_process_running(self, process_name: str) -> bool:
         """Check if a process is running."""
@@ -37,28 +151,6 @@ class OpenDuckPlaygroundService:
             return bool(output)
         except subprocess.CalledProcessError:
             return False
-
-    def train_model(self, duck_type: str, num_envs: int, motion_file: str) -> Tuple[bool, str, Optional[str]]:
-        """Train a model using the open duck playground."""
-        try:
-            cmd = [
-                'uv', 'run', 'playground/runner.py',
-                '--task', 'DucklingCommand',
-                '--num_envs', str(num_envs),
-                '--cfg_env', f'playground/{duck_type}/duckling_command.yaml',
-                '--cfg_train', f'playground/{duck_type}/train/amp_duckling_task.yaml',
-                '--motion_file', motion_file
-            ]
-            
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
-            
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
-                return False, "Training failed", stderr
-                
-            return True, "Training started successfully", stdout
-            
-        except Exception as e:
-            return False, f"Error starting training: {str(e)}", None
 
     def infer_model(self, duck_type: str, model_path: str, use_keyboard: bool = False) -> Tuple[bool, str, Optional[str]]:
         """Run inference using a trained model."""

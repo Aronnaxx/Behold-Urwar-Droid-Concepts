@@ -4,7 +4,7 @@ from ..services.open_duck_mini_playground import OpenDuckPlaygroundService
 from ..services.awd import AWDService
 from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
-from ..config import DUCK_TYPES
+from ..config import duck_config
 
 class DuckRoutes:
     """Class to handle all duck-related routes."""
@@ -24,18 +24,53 @@ class DuckRoutes:
         
     def get_internal_duck_type(self, duck_type, variant=None):
         """Get the internal duck type name based on the URL path and variant."""
-        if duck_type not in DUCK_TYPES:
-            return None
-            
-        if variant and variant in DUCK_TYPES[duck_type]['variants']:
-            return DUCK_TYPES[duck_type]['variants'][variant]['internal_name']
+        if variant:
+            return duck_config.get_internal_name(duck_type, variant)
         
         # If no variant specified, use the first variant's internal name as default
-        first_variant = next(iter(DUCK_TYPES[duck_type]['variants'].values()))
-        return first_variant['internal_name']
+        duck_type_config = duck_config.get_duck_type(duck_type)
+        if duck_type_config and 'variants' in duck_type_config:
+            first_variant_id = next(iter(duck_type_config['variants'].keys()))
+            return duck_config.get_internal_name(duck_type, first_variant_id)
+            
+        return None
         
     def register_routes(self):
         """Register all routes for the application."""
+        
+        # Duck type listing route
+        @self.app.route('/api/duck_types', methods=['GET'])
+        def list_duck_types():
+            duck_types = duck_config.list_duck_types()
+            return jsonify({
+                'success': True,
+                'duck_types': duck_types
+            })
+            
+        # Duck variant listing route
+        @self.app.route('/api/duck_types/<duck_type>/variants', methods=['GET'])
+        def list_variants(duck_type):
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return jsonify({
+                    'success': False,
+                    'error': f'Duck type {duck_type} not found'
+                }), 404
+                
+            variants = []
+            for variant_id, variant in duck_type_config.get('variants', {}).items():
+                variants.append({
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'description': variant.get('description', ''),
+                    'internal_name': variant.get('internal_name', ''),
+                    'model_path': variant.get('model_path', '')
+                })
+                
+            return jsonify({
+                'success': True,
+                'variants': variants
+            })
         
         # Training routes
         @self.app.route('/api/train', methods=['POST'])
@@ -89,23 +124,33 @@ class DuckRoutes:
                 current_app.logger.debug(f"Request headers: {dict(request.headers)}")
                 
                 # Get internal name from config
-                if duck_type not in DUCK_TYPES or variant not in DUCK_TYPES[duck_type]['variants']:
-                    error_msg = f"Invalid duck type ({duck_type}) or variant ({variant})"
+                if not duck_config.get_duck_type(duck_type):
+                    error_msg = f"Invalid duck type ({duck_type})"
                     current_app.logger.error(error_msg)
-                    current_app.logger.debug(f"Available duck types: {DUCK_TYPES.keys()}")
-                    if duck_type in DUCK_TYPES:
-                        current_app.logger.debug(f"Available variants for {duck_type}: {DUCK_TYPES[duck_type]['variants'].keys()}")
+                    return jsonify({
+                        'success': False,
+                        'error': error_msg,
+                        'details': {
+                            'duck_type': duck_type,
+                            'available_types': [dt['id'] for dt in duck_config.list_duck_types()]
+                        }
+                    }), 400
+                
+                if variant and not duck_config.get_variant(duck_type, variant):
+                    error_msg = f"Invalid variant ({variant}) for duck type ({duck_type})"
+                    current_app.logger.error(error_msg)
+                    duck_type_config = duck_config.get_duck_type(duck_type)
                     return jsonify({
                         'success': False,
                         'error': error_msg,
                         'details': {
                             'duck_type': duck_type,
                             'variant': variant,
-                            'available_types': list(DUCK_TYPES.keys())
+                            'available_variants': list(duck_type_config.get('variants', {}).keys())
                         }
                     }), 400
 
-                internal_name = DUCK_TYPES[duck_type]['variants'][variant]['internal_name']
+                internal_name = self.get_internal_duck_type(duck_type, variant)
                 current_app.logger.info(f"Using internal duck name: {internal_name} (from {duck_type}:{variant})")
                 
                 # Log parameters being passed to the service

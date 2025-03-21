@@ -1,0 +1,63 @@
+{
+    "name": "BD-X",
+    "id": "bdx",
+    "description": "A medium sized bipedal robot, seen in the parks and in presentations. Based off of the BD Series droids from Jedi: Fallen Order",
+    "variants": {
+        "go1": {
+            "name": "Go1",
+            "internal_name": "go_bdx",
+            "model_path": "/static/models/bdx.glb",
+            "description": "The original BD-X Go1 variant used in V1 of the park droids. This was superceded by the Go2 variant in V2.",
+            "specifications": {
+                "weight": 12.0,
+                "height": 0.35,
+                "max_speed": 3.5,
+                "battery_life": "2.5 hours",
+                "motor_type": "Unitree Go1",
+                "payload_capacity": "5kg"
+            }
+        },
+        "go2": {
+            "name": "Go2",
+            "internal_name": "go2_bdx",
+            "model_path": "/static/models/bdx.glb",
+            "description": "A customized variant of the original Go1, utilizing the newer Go2 motors and parts.",
+            "specifications": {
+                "weight": 15.0,
+                "height": 0.40,
+                "max_speed": 3.0,
+                "battery_life": "3 hours",
+                "motor_type": "Unitree Go2",
+                "payload_capacity": "10kg"
+            }
+        },
+        "cybergear": {
+            "name": "Cybergear",
+            "internal_name": "cybergear_bdx",
+            "model_path": "/static/models/bdx.glb",
+            "description": "A customized variant of the original Go1, utilizing more readily available BLDC motors.",
+            "specifications": {
+                "weight": 13.5,
+                "height": 0.38,
+                "max_speed": 2.2,
+                "battery_life": "2.8 hours",
+                "motor_type": "CyberGear BLDC",
+                "payload_capacity": "3kg"
+            }
+        },
+        "servo": {
+            "name": "Servo",
+            "internal_name": "servo_bdx",
+            "model_path": "/static/models/bdx.glb",
+            "description": "A customized variant of the original Go1, utilizing more cost effective servo motors.",
+            "specifications": {
+                "weight": 11.0,
+                "height": 0.33,
+                "max_speed": 0.5,
+                "battery_life": "3.2 hours",
+                "motor_type": "Generic",
+                "payload_capacity": "1kg?"
+            }
+        }
+    }
+} 

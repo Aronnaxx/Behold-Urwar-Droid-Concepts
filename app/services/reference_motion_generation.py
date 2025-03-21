@@ -9,6 +9,8 @@ from typing import Tuple, Optional, List, Dict
 import tempfile
 from datetime import datetime
 import traceback
+from ..config import duck_config
+from ..utils.command import run_command
 
 class ReferenceMotionGenerationService:
     def __init__(self, workspace_root: Path):
@@ -16,34 +18,6 @@ class ReferenceMotionGenerationService:
         self.submodule_dir = workspace_root / 'submodules/open_duck_reference_motion_generator'
         self.logger = logging.getLogger(__name__)
         
-    def run_command(self, command: List[str], cwd: str) -> Tuple[str, str, bool]:
-        """Helper function to run a shell command in the given directory."""
-        try:
-            if isinstance(command, list):
-                command = ' '.join(command)
-                
-            self.logger.debug(f"Running command: {command}")
-            self.logger.debug(f"Working directory: {cwd}")
-            
-            result = subprocess.run(
-                command,
-                shell=True,
-                cwd=cwd,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            return result.stdout, result.stderr, True
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Command failed with exit code {e.returncode}")
-            self.logger.error(f"Command output: {e.stdout}")
-            self.logger.error(f"Command error: {e.stderr}")
-            return e.stdout, e.stderr, False
-        except Exception as e:
-            self.logger.error(f"Exception running command: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            return "", str(e), False
-
     def generate_motion(self, 
                        duck_type: str, 
                        variant: str = None,
@@ -66,6 +40,14 @@ class ReferenceMotionGenerationService:
             
             self.logger.info("---------------------------------------")
             
+            # Get duck information using the internal name
+            duck_info = duck_config.get_config_by_internal_name(duck_type)
+            if duck_info:
+                self.logger.info(f"Found duck configuration for internal name {duck_type}")
+                self.logger.debug(f"Duck Type: {duck_info['duck_type']}, Variant: {duck_info['variant']}")
+            else:
+                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+            
             output_dir = self.workspace_root / 'generated_motions' / duck_type
             output_dir.mkdir(parents=True, exist_ok=True)
             
@@ -79,6 +61,9 @@ class ReferenceMotionGenerationService:
                 
                 self.logger.debug(f"Created temporary directory: {temp_dir_path}")
                 
+                # Use duck_type directly as it should already be the internal name from routes.py
+                script_duck_type = duck_type
+                
                 # Build command
                 if mode == 'auto':
                     generation_type = params.get('generation_type')
@@ -86,17 +71,9 @@ class ReferenceMotionGenerationService:
                     
                     cmd = ['uv', 'run', '--active', 'scripts/auto_waddle.py']
                     
-                    # IMPORTANT: Use the internal duck_type name which is expected by the script
-                    # Validate that duck_type is one of the allowed values
-                    valid_duck_types = ['go_bdx', 'open_duck_mini', 'open_duck_mini_v2', 'open_duck_mini_v1', 'open_duck_mini_v3', 'cybergear_bdx', 'servo_bdx', 'go2_bdx']
-                    if duck_type not in valid_duck_types:
-                        self.logger.warning(f"Invalid duck type '{duck_type}'. Must be one of: {valid_duck_types}")
-                        return False, f"Invalid duck type: {duck_type}", {
-                            'error': f"Duck type must be one of: {valid_duck_types}, not {duck_type}"
-                        }
-                    
-                    cmd.extend(['--duck', duck_type])
-                    self.logger.info(f"Using duck type '{duck_type}' for auto_waddle.py script")
+                    # Use the internal duck_type name which is expected by the script
+                    cmd.extend(['--duck', script_duck_type])
+                    self.logger.info(f"Using duck type '{script_duck_type}' for auto_waddle.py script")
                     
                     if generation_type == 'sweep':
                         self.logger.debug("Using sweep generation")
@@ -145,13 +122,11 @@ class ReferenceMotionGenerationService:
                 self.logger.debug(f"Duck type: {duck_type}")
                 self.logger.debug(f"Temp directory: {temp_dir_path}")
                 
-                # Run motion generation command
-                stdout, stderr, success = self.run_command(cmd, str(self.submodule_dir))
+                # Run motion generation command using the utility function
+                stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
                 
                 if not success:
                     self.logger.error("Motion generation command failed")
-                    self.logger.error(f"STDOUT: {stdout}")
-                    self.logger.error(f"STDERR: {stderr}")
                     return False, "Motion generation command failed", {
                         'command': ' '.join(cmd),
                         'stdout': stdout,
@@ -204,12 +179,10 @@ class ReferenceMotionGenerationService:
                 fit_cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + [str(f) for f in motion_files]
                 self.logger.debug(f"Executing fit command: {' '.join(fit_cmd)}")
                 
-                fit_stdout, fit_stderr, fit_success = self.run_command(fit_cmd, str(self.submodule_dir))
+                fit_stdout, fit_stderr, fit_success = run_command(fit_cmd, str(self.submodule_dir), logger=self.logger)
                 
                 if not fit_success:
                     self.logger.error("Polynomial fitting failed")
-                    self.logger.error(f"Fit STDOUT: {fit_stdout}")
-                    self.logger.error(f"Fit STDERR: {fit_stderr}")
                     return False, "Polynomial fitting failed", {
                         'command': ' '.join(fit_cmd),
                         'stdout': fit_stdout,
@@ -281,7 +254,12 @@ class ReferenceMotionGenerationService:
                     
                     # Copy to playground if needed
                     try:
-                        playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / duck_type / 'data' / pkl_file.name
+                        # If we have duck info, use the original duck type for the playground path
+                        playground_duck_type = duck_type
+                        if duck_info:
+                            playground_duck_type = duck_info['duck_type']
+                            
+                        playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / playground_duck_type / 'data' / pkl_file.name
                         playground_pkl_path.parent.mkdir(parents=True, exist_ok=True)
                         self.logger.debug(f"Copying {pkl_file} to playground: {playground_pkl_path}")
                         shutil.copy2(pkl_file, playground_pkl_path)
@@ -331,9 +309,9 @@ class ReferenceMotionGenerationService:
         """Fit polynomials to reference motion data."""
         try:
             cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + motion_files
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
+            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
             
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
+            if not success:
                 return False, "Polynomial fitting failed", stderr
                 
             return True, "Polynomial fitting completed successfully", stdout
@@ -345,9 +323,9 @@ class ReferenceMotionGenerationService:
         """Replay a reference motion."""
         try:
             cmd = ['uv', 'run', '--active', 'scripts/replay_motion.py', '--motion_file', motion_file]
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
+            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
             
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
+            if not success:
                 return False, "Motion replay failed", stderr
                 
             return True, "Motion replay started successfully", stdout
@@ -359,9 +337,9 @@ class ReferenceMotionGenerationService:
         """Plot polynomial coefficients."""
         try:
             cmd = ['uv', 'run', '--active', 'scripts/plot_polynomials.py', '--pkl_file', pkl_file, '--output_dir', output_dir]
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
+            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
             
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
+            if not success:
                 return False, "Polynomial plotting failed", None
                 
             # Get list of generated plot files
@@ -382,6 +360,13 @@ class ReferenceMotionGenerationService:
         """List available motion files for a specific duck type."""
         try:
             self.logger.debug(f"Listing motion files for {duck_type} (variant: {variant})")
+            
+            # If we have a variant, look up the internal name
+            internal_name = None
+            if variant:
+                internal_name = duck_config.get_internal_name(duck_type, variant)
+                if internal_name:
+                    duck_type = internal_name
             
             # Check motion directory
             motion_dir = self.workspace_root / 'generated_motions' / duck_type
@@ -421,6 +406,12 @@ class ReferenceMotionGenerationService:
         self.logger.debug(f"Listing training files for {duck_type}")
         
         try:
+            # If we're passed an internal name, resolve it to the duck type
+            duck_info = duck_config.find_by_internal_name(duck_type)
+            if duck_info:
+                duck_type = duck_info['duck_type']
+                self.logger.debug(f"Resolved internal name {duck_type} to duck type {duck_info['duck_type']}")
+            
             # Construct path to training directory
             training_dir = self.workspace_root / 'training' / duck_type
             self.logger.debug(f"Looking for training files in directory: {training_dir}")
@@ -460,6 +451,12 @@ class ReferenceMotionGenerationService:
         self.logger.debug(f"Listing testing files for {duck_type}")
         
         try:
+            # If we're passed an internal name, resolve it to the duck type
+            duck_info = duck_config.find_by_internal_name(duck_type)
+            if duck_info:
+                duck_type = duck_info['duck_type']
+                self.logger.debug(f"Resolved internal name {duck_type} to duck type {duck_info['duck_type']}")
+            
             # Construct path to testing directory
             testing_dir = self.workspace_root / 'testing' / duck_type
             self.logger.debug(f"Looking for testing files in directory: {testing_dir}")
