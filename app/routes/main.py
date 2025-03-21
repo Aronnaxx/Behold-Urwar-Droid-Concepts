@@ -1,12 +1,12 @@
 from flask import Blueprint, render_template, redirect, url_for
-from ..config import DUCK_TYPES, LEARNING_CONTENT
+from ..config import duck_config, LEARNING_CONTENT
 
 main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
     """Render the main dashboard with available duck types."""
-    return render_template('index.html', duck_types=DUCK_TYPES)
+    return render_template('index.html', duck_types=duck_config.get_duck_types())
 
 @main.route('/learn/<topic>')
 def learn(topic):

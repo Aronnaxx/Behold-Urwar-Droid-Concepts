@@ -97,25 +97,68 @@
         border-radius: 0.25rem;
     }
     .log-output {
-        max-height: 200px;
+        max-height: 400px;
         overflow-y: auto;
         background-color: var(--bs-gray-900);
         padding: 1rem;
         border-radius: 0.25rem;
         font-family: monospace;
+        margin-top: 1rem;
     }
     .log-entry {
-        margin-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+        background-color: var(--bs-gray-800);
     }
     .log-entry.success {
+        background-color: rgba(25, 135, 84, 0.1);
+        border: 1px solid var(--bs-success);
         color: var(--bs-success);
     }
     .log-entry.error {
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 1px solid var(--bs-danger);
         color: var(--bs-danger);
     }
-    .log-timestamp {
-        color: var(--bs-gray-500);
-        margin-right: 0.5rem;
+    .log-summary {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .log-details {
+        background-color: var(--bs-gray-900);
+        border: 1px solid var(--bs-gray-700);
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        white-space: pre-wrap;
+        overflow-x: auto;
+    }
+    .command-output, .error-traceback {
+        margin: 0.5rem 0;
+        padding: 0.5rem;
+        background-color: var(--bs-gray-800);
+        border: 1px solid var(--bs-gray-700);
+        border-radius: 0.25rem;
+        font-family: monospace;
+    }
+    .command-line {
+        font-weight: bold;
+        margin: 0.5rem 0;
+        color: var(--bs-gray-300);
+    }
+    .toggle-details {
+        background-color: var(--bs-gray-700);
+        border: none;
+        color: var(--bs-gray-300);
+        border-radius: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        margin: 0.5rem 0;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+    .toggle-details:hover {
+        background-color: var(--bs-gray-600);
     }
     .duck-specs {
         background-color: var(--bs-gray-800);
@@ -190,8 +233,19 @@
                 <h3>{{ duck.name }}</h3>
                 <p>{{ duck.description }}</p>
                 
+                <div class="form-group mb-3">
+                    <label for="variant-select" class="form-label">Variant</label>
+                    <select class="form-control" id="variant-select" onchange="window.location.href = '{{ url_for(duck.type + '.duck_page') }}?variant=' + this.value">
+                        {% for variant_id, variant in variants.items() %}
+                        <option value="{{ variant_id }}" {% if variant_id == duck.variant.id %}selected{% endif %}>
+                            {{ variant.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
                 <model-viewer
-                    src="{{ duck.model_path }}"
+                    src="{{ duck.variant.model_path }}"
                     alt="{{ duck.name }} 3D Model"
                     auto-rotate
                     camera-controls
@@ -246,6 +300,33 @@
                                 <option value="sweep">Parameter Sweep</option>
                                 <option value="random">Random Motions</option>
                             </select>
+                        </div>
+
+                        <div id="single-motion-params">
+                            <div class="form-group">
+                                <label for="motion-type" class="form-label">Motion Type</label>
+                                <select class="form-control" id="motion-type" name="motion_type">
+                                    <option value="walk">Walking</option>
+                                    <option value="run">Running</option>
+                                    <option value="jump">Jumping</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="duration" class="form-label">Duration (seconds)</label>
+                                <input type="number" class="form-control" id="duration" name="duration" value="5" step="0.1">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="speed" class="form-label">Speed (m/s)</label>
+                                <input type="number" class="form-control" id="speed" name="speed" value="0.5" step="0.1">
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="num-motions-group" style="display: none;">
+                            <label for="num-motions" class="form-label">Number of Motions</label>
+                            <input type="number" class="form-control" id="num-motions" name="num_motions" value="10" min="1" max="100">
+                            <div class="form-text">Generate multiple random motions (1-100)</div>
                         </div>
                     </div>
 
@@ -369,12 +450,12 @@
                     </div>
                 </div>
 
-                <div class="mt-4">
-                    <h3>Generation Progress</h3>
-                    <div class="progress">
+                <div class="form-group mt-4">
+                    <label class="form-label">Generation Progress</label>
+                    <div class="progress mb-2">
                         <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                     </div>
-                    <div class="log-output mt-3"></div>
+                    <div class="log-output"></div>
                 </div>
             </div>
 
@@ -452,28 +533,42 @@
 {% endblock %}
 
 {% block extra_js %}
-<script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 <script src="{{ url_for('static', filename='js/reference_motions.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const motionForm = document.getElementById('motion-form');
+    // This script handles UI elements not managed by reference_motions.js
+    console.log("DEBUG-HTML: Duck page initialization started");
+    
     const trainingForm = document.getElementById('training-config-form');
     const testingForm = document.getElementById('testing-config-form');
-    const progressBars = document.querySelectorAll('.progress-bar');
-    const logOutputs = document.querySelectorAll('.log-output');
-    const resultsContainer = document.querySelector('.results-container');
-    const modeSelect = document.getElementById('mode-select');
-    const autoModeOptions = document.getElementById('auto-mode-options');
-    const advancedOptions = document.getElementById('advanced-options');
+    const numMotionsGroup = document.getElementById('num-motions-group');
+    const generationType = document.getElementById('generation-type');
     const motionFileStatus = document.getElementById('motion-file-status');
     const trainingFileStatus = document.getElementById('training-file-status');
     const testingFileStatus = document.getElementById('testing-file-status');
-
+    const modeSelect = document.getElementById('mode-select');
+    const autoModeOptions = document.getElementById('auto-mode-options');
+    const advancedOptions = document.getElementById('advanced-options');
+    
+    console.log("DEBUG-HTML: UI elements initialized");
+    
     // Check file availability on page load
     checkFileAvailability();
+    
+    // Show/hide generation type options
+    generationType.addEventListener('change', function() {
+        console.log("DEBUG-HTML: Generation type changed:", this.value);
+        if (this.value === 'random') {
+            numMotionsGroup.style.display = 'block';
+        } else {
+            numMotionsGroup.style.display = 'none';
+        }
+    });
 
     // Handle mode selection
     modeSelect.addEventListener('change', function() {
+        console.log("DEBUG-HTML: Mode changed:", this.value);
         const isAdvanced = this.value === 'advanced';
         autoModeOptions.style.display = isAdvanced ? 'none' : 'block';
         advancedOptions.style.display = isAdvanced ? 'block' : 'none';
@@ -488,32 +583,109 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial state
     autoModeOptions.style.display = 'block';
     advancedOptions.style.display = 'none';
+    numMotionsGroup.style.display = generationType.value === 'random' ? 'block' : 'none';
 
     async function checkFileAvailability() {
         try {
+            console.log("DEBUG-HTML: Starting file availability check");
+            console.log("DEBUG-HTML: Current URL:", window.location.href);
+            console.log("DEBUG-HTML: Current pathname:", window.location.pathname);
+            
+            // Extract duck type and variant from URL
+            const pathParts = window.location.pathname.split('/').filter(p => p);
+            const urlDuckType = pathParts.length > 0 ? pathParts[0] : 'open_duck_mini';
+            const urlParams = new URLSearchParams(window.location.search);
+            const variant = urlParams.get('variant');
+            
+            console.log(`DEBUG-HTML: File availability check for duck type: "${urlDuckType}", variant: "${variant || 'none'}"`);
+            console.log("DEBUG-HTML: Path parts:", pathParts);
+            
             // Check motion files
-            const motionResponse = await fetch(`/{{ duck.type }}/check_motion_files`);
-            const motionData = await motionResponse.json();
-            updateFileStatus(motionFileStatus, motionData.available);
+            try {
+                const motionUrl = `/${urlDuckType}/check_motion_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking motion files at URL:", motionUrl);
+                
+                const motionResponse = await fetch(motionUrl);
+                console.log("DEBUG-HTML: Motion response status:", motionResponse.status);
+                const motionText = await motionResponse.text();
+                console.log("DEBUG-HTML: Motion response text:", motionText);
+                
+                let motionData;
+                try {
+                    motionData = JSON.parse(motionText);
+                    console.log("DEBUG-HTML: Motion data:", motionData);
+                    updateFileStatus(motionFileStatus, motionData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing motion response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", motionText);
+                    updateFileStatus(motionFileStatus, false);
+                }
+            } catch (motionError) {
+                console.error("DEBUG-HTML: Error fetching motion files:", motionError);
+                updateFileStatus(motionFileStatus, false);
+            }
             
             // Check training files
-            const trainingResponse = await fetch(`/{{ duck.type }}/check_training_files`);
-            const trainingData = await trainingResponse.json();
-            updateFileStatus(trainingFileStatus, trainingData.available);
+            try {
+                const trainingUrl = `/${urlDuckType}/check_training_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking training files at URL:", trainingUrl);
+                
+                const trainingResponse = await fetch(trainingUrl);
+                console.log("DEBUG-HTML: Training response status:", trainingResponse.status);
+                const trainingText = await trainingResponse.text();
+                console.log("DEBUG-HTML: Training response text:", trainingText);
+                
+                let trainingData;
+                try {
+                    trainingData = JSON.parse(trainingText);
+                    console.log("DEBUG-HTML: Training data:", trainingData);
+                    updateFileStatus(trainingFileStatus, trainingData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing training response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", trainingText);
+                    updateFileStatus(trainingFileStatus, false);
+                }
+            } catch (trainingError) {
+                console.error("DEBUG-HTML: Error fetching training files:", trainingError);
+                updateFileStatus(trainingFileStatus, false);
+            }
             
             // Check testing files
-            const testingResponse = await fetch(`/{{ duck.type }}/check_testing_files`);
-            const testingData = await testingResponse.json();
-            updateFileStatus(testingFileStatus, testingData.available);
+            try {
+                const testingUrl = `/${urlDuckType}/check_testing_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking testing files at URL:", testingUrl);
+                
+                const testingResponse = await fetch(testingUrl);
+                console.log("DEBUG-HTML: Testing response status:", testingResponse.status);
+                const testingText = await testingResponse.text();
+                console.log("DEBUG-HTML: Testing response text:", testingText);
+                
+                let testingData;
+                try {
+                    testingData = JSON.parse(testingText);
+                    console.log("DEBUG-HTML: Testing data:", testingData);
+                    updateFileStatus(testingFileStatus, testingData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing testing response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", testingText);
+                    updateFileStatus(testingFileStatus, false);
+                }
+            } catch (testingError) {
+                console.error("DEBUG-HTML: Error fetching testing files:", testingError);
+                updateFileStatus(testingFileStatus, false);
+            }
 
             // Update button states
             updateButtonStates();
+            console.log("DEBUG-HTML: File availability check complete");
+            
         } catch (error) {
-            console.error('Error checking file availability:', error);
+            console.error('DEBUG-HTML: Error in checkFileAvailability:', error);
         }
     }
 
     function updateFileStatus(element, available) {
+        console.log(`DEBUG-HTML: Updating file status element to ${available ? 'available' : 'missing'}`);
         element.innerHTML = available 
             ? '<i class="fas fa-check"></i> Required files available'
             : '<i class="fas fa-times"></i> Required files missing';
@@ -521,214 +693,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateButtonStates() {
-        const trainingButton = trainingForm.querySelector('button');
-        const testingButton = testingForm.querySelector('button');
+        console.log("DEBUG-HTML: Updating button states");
+        const trainingButton = trainingForm?.querySelector('button');
+        const testingButton = testingForm?.querySelector('button');
         
-        trainingButton.disabled = !trainingFileStatus.classList.contains('available');
-        testingButton.disabled = !testingFileStatus.classList.contains('available');
-    }
-
-    function addLogEntry(message, type = 'info', step = 1) {
-        const logOutput = logOutputs[step - 1];
-        const entry = document.createElement('div');
-        entry.className = `log-entry ${type}`;
-        entry.innerHTML = `
-            <span class="log-timestamp">[${new Date().toLocaleTimeString()}]</span>
-            <span class="log-message">${message}</span>
-        `;
-        logOutput.appendChild(entry);
-        logOutput.scrollTop = logOutput.scrollHeight;
-    }
-
-    function updateStepStatus(step, status) {
-        const stepElement = document.getElementById(`step${step}`);
-        const statusElement = stepElement.querySelector('.step-status');
+        if (trainingButton) {
+            trainingButton.disabled = !trainingFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Training button disabled:", trainingButton.disabled);
+        }
         
-        stepElement.classList.remove('active', 'completed');
-        statusElement.className = 'step-status';
-        
-        switch(status) {
-            case 'completed':
-                stepElement.classList.add('completed');
-                statusElement.classList.add('completed');
-                statusElement.innerHTML = '<i class="fas fa-check"></i> Completed';
-                break;
-            case 'active':
-                stepElement.classList.add('active');
-                statusElement.classList.add('active');
-                statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> In Progress';
-                break;
-            case 'error':
-                statusElement.classList.add('error');
-                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
-                break;
-            default:
-                statusElement.classList.add('pending');
-                statusElement.innerHTML = 'Pending';
+        if (testingButton) {
+            testingButton.disabled = !testingFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Testing button disabled:", testingButton.disabled);
         }
     }
-
-    motionForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        progressBars[0].style.width = '0%';
-        logOutputs[0].innerHTML = '';
-        updateStepStatus(1, 'active');
-        
-        try {
-            const formData = new FormData(motionForm);
-            const response = await fetch(`/{{ duck.type }}/generate_motion`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                addLogEntry('Motion generated successfully', 'success', 1);
-                updateStepStatus(1, 'completed');
-                updateStepStatus(2, 'active');
-                
-                // Show preview section
-                document.querySelector('.preview-section').style.display = 'block';
-                
-                // Enable training form
-                trainingForm.querySelector('button').disabled = false;
-                
-                // If we have motion data, store it for preview
-                if (data.motion_data) {
-                    window.currentMotionData = data.motion_data;
-                }
-            } else {
-                const errorMessage = data.error || 'Unknown error occurred';
-                addLogEntry(`Motion generation failed: ${errorMessage}`, 'error', 1);
-                updateStepStatus(1, 'error');
-                
-                // Log any command output for debugging
-                if (data.output) {
-                    addLogEntry(`Command output: ${data.output}`, 'info', 1);
-                }
-                if (data.error) {
-                    addLogEntry(`Error output: ${data.error}`, 'error', 1);
-                }
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 1);
-            updateStepStatus(1, 'error');
-        }
-    });
-
-    trainingForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        progressBars[1].style.width = '0%';
-        logOutputs[1].innerHTML = '';
-        updateStepStatus(2, 'active');
-        
-        try {
-            const formData = new FormData(trainingForm);
-            const response = await fetch(`/{{ duck.type }}/start_training`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                addLogEntry('Training started successfully', 'success', 2);
-                // Start progress polling
-                pollTrainingProgress(data.task_id);
-            } else {
-                addLogEntry(`Training failed: ${data.error}`, 'error', 2);
-                updateStepStatus(2, 'error');
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 2);
-            updateStepStatus(2, 'error');
-        }
-    });
-
-    testingForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        resultsContainer.innerHTML = '';
-        updateStepStatus(3, 'active');
-        
-        try {
-            const formData = new FormData(testingForm);
-            const response = await fetch(`/{{ duck.type }}/start_testing`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                resultsContainer.innerHTML = `
-                    <div class="alert alert-success">
-                        <h4>Test Results</h4>
-                        <p>Average Reward: ${data.results.average_reward}</p>
-                        <p>Success Rate: ${data.results.success_rate}%</p>
-                    </div>
-                `;
-                updateStepStatus(3, 'completed');
-            } else {
-                resultsContainer.innerHTML = `
-                    <div class="alert alert-danger">
-                        Testing failed: ${data.error}
-                    </div>
-                `;
-                updateStepStatus(3, 'error');
-            }
-        } catch (error) {
-            resultsContainer.innerHTML = `
-                <div class="alert alert-danger">
-                    Error: ${error.message}
-                </div>
-            `;
-            updateStepStatus(3, 'error');
-        }
-    });
-
-    async function pollTrainingProgress(taskId) {
-        try {
-            const response = await fetch(`/{{ duck.type }}/training_status/${taskId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                progressBars[1].style.width = `${data.status.progress || 0}%`;
-                addLogEntry(data.status.message || 'Training in progress...', 'info', 2);
-                
-                if (data.status.progress < 100) {
-                    setTimeout(() => pollTrainingProgress(taskId), 5000);
-                } else {
-                    addLogEntry('Training completed!', 'success', 2);
-                    updateStepStatus(2, 'completed');
-                    updateStepStatus(3, 'active');
-                    
-                    // Enable testing form
-                    testingForm.querySelector('button').disabled = false;
-                }
-            } else {
-                addLogEntry(`Error checking progress: ${data.error}`, 'error', 2);
-                updateStepStatus(2, 'error');
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 2);
-            updateStepStatus(2, 'error');
-        }
-    }
-
-    // Initially disable training and testing forms
-    trainingForm.querySelector('button').disabled = true;
-    testingForm.querySelector('button').disabled = true;
 
     // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
+    if (window.bootstrap && window.bootstrap.Tooltip) {
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+    
+    // Handle training form if it exists
+    if (trainingForm) {
+        trainingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Training form submitted - functionality to be implemented");
+            // Training functionality would be implemented here
+        });
+    }
+    
+    // Handle testing form if it exists
+    if (testingForm) {
+        testingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Testing form submitted - functionality to be implemented");
+            // Testing functionality would be implemented here
+        });
+    }
+    
     // Validation ranges
     const validationRanges = {
         dx_max: { min: 0.01, max: 0.1 },
@@ -762,134 +767,109 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.gait-customization input').forEach(input => {
         input.addEventListener('input', () => validateInput(input));
     });
+    
+    console.log("DEBUG-HTML: Duck page initialization complete");
+});
 
-    // Handle polynomial fitting
-    document.getElementById('fit-polynomials').addEventListener('click', async function() {
-        try {
-            const response = await fetch(`/{{ duck.type }}/fit_polynomials`, {
-                method: 'POST'
-            });
-            const data = await response.json();
+// Direct script to handle the Generate Motion button
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DEBUG-HTML: Direct button handler initialization");
+    
+    // Find the generate motion button
+    const generateButton = document.querySelector('#motion-form button[type="submit"]');
+    if (generateButton) {
+        console.log("DEBUG-HTML: Found Generate Motion button:", generateButton);
+        
+        generateButton.addEventListener('click', async function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Generate Motion button clicked directly");
             
-            if (data.success) {
-                addLogEntry('Polynomials fitted successfully', 'success', 1);
-                // Show plot if available
-                if (data.plot_url) {
-                    window.open(data.plot_url, '_blank');
+            try {
+                // Get form data and URL info
+                const form = document.getElementById('motion-form');
+                const formData = new FormData(form);
+                
+                // Get duck type from URL
+                const pathParts = window.location.pathname.split('/').filter(p => p);
+                const duckType = pathParts.length > 0 ? pathParts[0] : 'open_duck_mini';
+                
+                // Get variant from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const variant = urlParams.get('variant');
+                
+                console.log(`DEBUG-HTML: Generating motion for ${duckType}, variant: ${variant}`);
+                console.log("DEBUG-HTML: Form data:");
+                for (let [key, value] of formData.entries()) {
+                    console.log(`  ${key}: ${value}`);
                 }
-            } else {
-                addLogEntry(`Polynomial fitting failed: ${data.error}`, 'error', 1);
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 1);
-        }
-    });
-
-    // Handle motion replay
-    document.getElementById('replay-motion').addEventListener('click', async function() {
-        try {
-            const response = await fetch(`/{{ duck.type }}/replay_motion`, {
-                method: 'POST'
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                addLogEntry('Motion replay started', 'success', 1);
-                // Open visualization in new window if available
-                if (data.visualization_url) {
-                    window.open(data.visualization_url, '_blank');
+                
+                // Show progress in UI
+                const progressBar = document.querySelector('.progress-bar');
+                const logOutput = document.querySelector('.log-output');
+                if (progressBar) progressBar.style.width = '20%';
+                if (logOutput) {
+                    logOutput.innerHTML = '<div class="log-entry">Starting motion generation process...</div>';
                 }
-            } else {
-                addLogEntry(`Motion replay failed: ${data.error}`, 'error', 1);
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 1);
-        }
-    });
-
-    // Handle motion download
-    document.getElementById('download-motion').addEventListener('click', async function() {
-        try {
-            const response = await fetch(`/{{ duck.type }}/download_motion`, {
-                method: 'POST'
-            });
-            
-            if (response.ok) {
-                // Get the filename from the Content-Disposition header if available
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = 'motion.json';
-                if (contentDisposition) {
-                    const matches = /filename="(.+)"/.exec(contentDisposition);
-                    if (matches) {
-                        filename = matches[1];
+                
+                // Create the URL for the request
+                const url = `/${duckType}/generate_motion${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Submitting to URL:", url);
+                
+                // Execute fetch request
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log("DEBUG-HTML: Response status:", response.status);
+                if (progressBar) progressBar.style.width = '60%';
+                
+                // Process response
+                const data = await response.json();
+                console.log("DEBUG-HTML: Response data:", data);
+                
+                // Update UI with result
+                if (logOutput) {
+                    if (data.success) {
+                        if (progressBar) progressBar.style.width = '100%';
+                        logOutput.innerHTML += '<div class="log-entry success">Motion generated successfully!</div>';
+                        
+                        if (data.motion_data && data.motion_data.output) {
+                            logOutput.innerHTML += '<div class="log-entry info">Command output:</div>';
+                            logOutput.innerHTML += `<div class="log-entry code"><pre>${data.motion_data.output}</pre></div>`;
+                        }
+                    } else {
+                        if (progressBar) progressBar.style.width = '100%';
+                        const errorMessage = data.error || 'Unknown error occurred';
+                        logOutput.innerHTML += `<div class="log-entry error">Error: ${errorMessage}</div>`;
+                        
+                        if (data.details) {
+                            if (data.details.output) {
+                                logOutput.innerHTML += '<div class="log-entry info">Command output:</div>';
+                                logOutput.innerHTML += `<div class="log-entry code"><pre>${data.details.output}</pre></div>`;
+                            }
+                            if (data.details.traceback) {
+                                logOutput.innerHTML += '<div class="log-entry info">Error traceback:</div>';
+                                logOutput.innerHTML += `<div class="log-entry code"><pre>${data.details.traceback}</pre></div>`;
+                            }
+                        }
                     }
                 }
                 
-                // Create a blob from the response
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+            } catch (error) {
+                console.error("DEBUG-HTML: Error in motion generation:", error);
+                const logOutput = document.querySelector('.log-output');
+                const progressBar = document.querySelector('.progress-bar');
                 
-                addLogEntry('Motion file downloaded successfully', 'success', 1);
-            } else {
-                const data = await response.json();
-                addLogEntry(`Download failed: ${data.error || 'Unknown error'}`, 'error', 1);
-            }
-        } catch (error) {
-            addLogEntry(`Error downloading motion: ${error.message}`, 'error', 1);
-        }
-    });
-
-    // Playground handling
-    const playgroundContainer = document.getElementById('playground-container');
-    const launchPlaygroundBtn = document.getElementById('launch-playground');
-    let playgroundRunning = false;
-
-    launchPlaygroundBtn.addEventListener('click', async function() {
-        try {
-            if (!playgroundRunning) {
-                // Launch playground
-                const response = await fetch(`/{{ duck.type }}/launch_playground`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    playgroundRunning = true;
-                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Playground';
-                    launchPlaygroundBtn.classList.remove('btn-info');
-                    launchPlaygroundBtn.classList.add('btn-danger');
-                    addLogEntry('Playground launched successfully', 'success', 1);
-                } else {
-                    addLogEntry(`Failed to launch playground: ${data.error}`, 'error', 1);
-                }
-            } else {
-                // Stop playground
-                const response = await fetch(`/{{ duck.type }}/close_playground`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    playgroundRunning = false;
-                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-play"></i> Launch Playground';
-                    launchPlaygroundBtn.classList.remove('btn-danger');
-                    launchPlaygroundBtn.classList.add('btn-info');
-                    addLogEntry('Playground closed', 'success', 1);
-                } else {
-                    addLogEntry(`Failed to close playground: ${data.error}`, 'error', 1);
+                if (progressBar) progressBar.style.width = '100%';
+                if (logOutput) {
+                    logOutput.innerHTML += `<div class="log-entry error">Error: ${error.message}</div>`;
                 }
             }
-        } catch (error) {
-            addLogEntry(`Error managing playground: ${error.message}`, 'error', 1);
-        }
-    });
+        });
+    } else {
+        console.error("DEBUG-HTML: Generate Motion button not found!");
+    }
 });
 </script>
 {% endblock %} 
