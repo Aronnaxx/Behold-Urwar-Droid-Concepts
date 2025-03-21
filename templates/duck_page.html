@@ -537,24 +537,38 @@
 <script src="{{ url_for('static', filename='js/reference_motions.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const motionForm = document.getElementById('motion-form');
+    // This script handles UI elements not managed by reference_motions.js
+    console.log("DEBUG-HTML: Duck page initialization started");
+    
     const trainingForm = document.getElementById('training-config-form');
     const testingForm = document.getElementById('testing-config-form');
-    const progressBars = document.querySelectorAll('.progress-bar');
-    const logOutputs = document.querySelectorAll('.log-output');
-    const resultsContainer = document.querySelector('.results-container');
-    const modeSelect = document.getElementById('mode-select');
-    const autoModeOptions = document.getElementById('auto-mode-options');
-    const advancedOptions = document.getElementById('advanced-options');
+    const numMotionsGroup = document.getElementById('num-motions-group');
+    const generationType = document.getElementById('generation-type');
     const motionFileStatus = document.getElementById('motion-file-status');
     const trainingFileStatus = document.getElementById('training-file-status');
     const testingFileStatus = document.getElementById('testing-file-status');
-
+    const modeSelect = document.getElementById('mode-select');
+    const autoModeOptions = document.getElementById('auto-mode-options');
+    const advancedOptions = document.getElementById('advanced-options');
+    
+    console.log("DEBUG-HTML: UI elements initialized");
+    
     // Check file availability on page load
     checkFileAvailability();
+    
+    // Show/hide generation type options
+    generationType.addEventListener('change', function() {
+        console.log("DEBUG-HTML: Generation type changed:", this.value);
+        if (this.value === 'random') {
+            numMotionsGroup.style.display = 'block';
+        } else {
+            numMotionsGroup.style.display = 'none';
+        }
+    });
 
     // Handle mode selection
     modeSelect.addEventListener('change', function() {
+        console.log("DEBUG-HTML: Mode changed:", this.value);
         const isAdvanced = this.value === 'advanced';
         autoModeOptions.style.display = isAdvanced ? 'none' : 'block';
         advancedOptions.style.display = isAdvanced ? 'block' : 'none';
@@ -569,32 +583,109 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial state
     autoModeOptions.style.display = 'block';
     advancedOptions.style.display = 'none';
+    numMotionsGroup.style.display = generationType.value === 'random' ? 'block' : 'none';
 
     async function checkFileAvailability() {
         try {
+            console.log("DEBUG-HTML: Starting file availability check");
+            console.log("DEBUG-HTML: Current URL:", window.location.href);
+            console.log("DEBUG-HTML: Current pathname:", window.location.pathname);
+            
+            // Extract duck type and variant from URL
+            const pathParts = window.location.pathname.split('/').filter(p => p);
+            const urlDuckType = pathParts.length > 0 ? pathParts[0] : 'open_duck_mini';
+            const urlParams = new URLSearchParams(window.location.search);
+            const variant = urlParams.get('variant');
+            
+            console.log(`DEBUG-HTML: File availability check for duck type: "${urlDuckType}", variant: "${variant || 'none'}"`);
+            console.log("DEBUG-HTML: Path parts:", pathParts);
+            
             // Check motion files
-            const motionResponse = await fetch(`/{{ duck.type }}/check_motion_files`);
-            const motionData = await motionResponse.json();
-            updateFileStatus(motionFileStatus, motionData.available);
+            try {
+                const motionUrl = `/${urlDuckType}/check_motion_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking motion files at URL:", motionUrl);
+                
+                const motionResponse = await fetch(motionUrl);
+                console.log("DEBUG-HTML: Motion response status:", motionResponse.status);
+                const motionText = await motionResponse.text();
+                console.log("DEBUG-HTML: Motion response text:", motionText);
+                
+                let motionData;
+                try {
+                    motionData = JSON.parse(motionText);
+                    console.log("DEBUG-HTML: Motion data:", motionData);
+                    updateFileStatus(motionFileStatus, motionData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing motion response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", motionText);
+                    updateFileStatus(motionFileStatus, false);
+                }
+            } catch (motionError) {
+                console.error("DEBUG-HTML: Error fetching motion files:", motionError);
+                updateFileStatus(motionFileStatus, false);
+            }
             
             // Check training files
-            const trainingResponse = await fetch(`/{{ duck.type }}/check_training_files`);
-            const trainingData = await trainingResponse.json();
-            updateFileStatus(trainingFileStatus, trainingData.available);
+            try {
+                const trainingUrl = `/${urlDuckType}/check_training_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking training files at URL:", trainingUrl);
+                
+                const trainingResponse = await fetch(trainingUrl);
+                console.log("DEBUG-HTML: Training response status:", trainingResponse.status);
+                const trainingText = await trainingResponse.text();
+                console.log("DEBUG-HTML: Training response text:", trainingText);
+                
+                let trainingData;
+                try {
+                    trainingData = JSON.parse(trainingText);
+                    console.log("DEBUG-HTML: Training data:", trainingData);
+                    updateFileStatus(trainingFileStatus, trainingData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing training response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", trainingText);
+                    updateFileStatus(trainingFileStatus, false);
+                }
+            } catch (trainingError) {
+                console.error("DEBUG-HTML: Error fetching training files:", trainingError);
+                updateFileStatus(trainingFileStatus, false);
+            }
             
             // Check testing files
-            const testingResponse = await fetch(`/{{ duck.type }}/check_testing_files`);
-            const testingData = await testingResponse.json();
-            updateFileStatus(testingFileStatus, testingData.available);
+            try {
+                const testingUrl = `/${urlDuckType}/check_testing_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking testing files at URL:", testingUrl);
+                
+                const testingResponse = await fetch(testingUrl);
+                console.log("DEBUG-HTML: Testing response status:", testingResponse.status);
+                const testingText = await testingResponse.text();
+                console.log("DEBUG-HTML: Testing response text:", testingText);
+                
+                let testingData;
+                try {
+                    testingData = JSON.parse(testingText);
+                    console.log("DEBUG-HTML: Testing data:", testingData);
+                    updateFileStatus(testingFileStatus, testingData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing testing response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", testingText);
+                    updateFileStatus(testingFileStatus, false);
+                }
+            } catch (testingError) {
+                console.error("DEBUG-HTML: Error fetching testing files:", testingError);
+                updateFileStatus(testingFileStatus, false);
+            }
 
             // Update button states
             updateButtonStates();
+            console.log("DEBUG-HTML: File availability check complete");
+            
         } catch (error) {
-            console.error('Error checking file availability:', error);
+            console.error('DEBUG-HTML: Error in checkFileAvailability:', error);
         }
     }
 
     function updateFileStatus(element, available) {
+        console.log(`DEBUG-HTML: Updating file status element to ${available ? 'available' : 'missing'}`);
         element.innerHTML = available 
             ? '<i class="fas fa-check"></i> Required files available'
             : '<i class="fas fa-times"></i> Required files missing';
@@ -602,214 +693,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateButtonStates() {
-        const trainingButton = trainingForm.querySelector('button');
-        const testingButton = testingForm.querySelector('button');
+        console.log("DEBUG-HTML: Updating button states");
+        const trainingButton = trainingForm?.querySelector('button');
+        const testingButton = testingForm?.querySelector('button');
         
-        trainingButton.disabled = !trainingFileStatus.classList.contains('available');
-        testingButton.disabled = !testingFileStatus.classList.contains('available');
-    }
-
-    function addLogEntry(message, type = 'info', step = 1) {
-        const logOutput = logOutputs[step - 1];
-        const entry = document.createElement('div');
-        entry.className = `log-entry ${type}`;
-        entry.innerHTML = `
-            <span class="log-timestamp">[${new Date().toLocaleTimeString()}]</span>
-            <span class="log-message">${message}</span>
-        `;
-        logOutput.appendChild(entry);
-        logOutput.scrollTop = logOutput.scrollHeight;
-    }
-
-    function updateStepStatus(step, status) {
-        const stepElement = document.getElementById(`step${step}`);
-        const statusElement = stepElement.querySelector('.step-status');
+        if (trainingButton) {
+            trainingButton.disabled = !trainingFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Training button disabled:", trainingButton.disabled);
+        }
         
-        stepElement.classList.remove('active', 'completed');
-        statusElement.className = 'step-status';
-        
-        switch(status) {
-            case 'completed':
-                stepElement.classList.add('completed');
-                statusElement.classList.add('completed');
-                statusElement.innerHTML = '<i class="fas fa-check"></i> Completed';
-                break;
-            case 'active':
-                stepElement.classList.add('active');
-                statusElement.classList.add('active');
-                statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> In Progress';
-                break;
-            case 'error':
-                statusElement.classList.add('error');
-                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
-                break;
-            default:
-                statusElement.classList.add('pending');
-                statusElement.innerHTML = 'Pending';
+        if (testingButton) {
+            testingButton.disabled = !testingFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Testing button disabled:", testingButton.disabled);
         }
     }
-
-    motionForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        progressBars[0].style.width = '0%';
-        logOutputs[0].innerHTML = '';
-        updateStepStatus(1, 'active');
-        
-        try {
-            const formData = new FormData(motionForm);
-            const response = await fetch(`/{{ duck.type }}/generate_motion`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                addLogEntry('Motion generated successfully', 'success', 1);
-                updateStepStatus(1, 'completed');
-                updateStepStatus(2, 'active');
-                
-                // Show preview section
-                document.querySelector('.preview-section').style.display = 'block';
-                
-                // Enable training form
-                trainingForm.querySelector('button').disabled = false;
-                
-                // If we have motion data, store it for preview
-                if (data.motion_data) {
-                    window.currentMotionData = data.motion_data;
-                }
-            } else {
-                const errorMessage = data.error || 'Unknown error occurred';
-                addLogEntry(`Motion generation failed: ${errorMessage}`, 'error', 1);
-                updateStepStatus(1, 'error');
-                
-                // Log any command output for debugging
-                if (data.output) {
-                    addLogEntry(`Command output: ${data.output}`, 'info', 1);
-                }
-                if (data.error) {
-                    addLogEntry(`Error output: ${data.error}`, 'error', 1);
-                }
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 1);
-            updateStepStatus(1, 'error');
-        }
-    });
-
-    trainingForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        progressBars[1].style.width = '0%';
-        logOutputs[1].innerHTML = '';
-        updateStepStatus(2, 'active');
-        
-        try {
-            const formData = new FormData(trainingForm);
-            const response = await fetch(`/{{ duck.type }}/start_training`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                addLogEntry('Training started successfully', 'success', 2);
-                // Start progress polling
-                pollTrainingProgress(data.task_id);
-            } else {
-                addLogEntry(`Training failed: ${data.error}`, 'error', 2);
-                updateStepStatus(2, 'error');
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 2);
-            updateStepStatus(2, 'error');
-        }
-    });
-
-    testingForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        resultsContainer.innerHTML = '';
-        updateStepStatus(3, 'active');
-        
-        try {
-            const formData = new FormData(testingForm);
-            const response = await fetch(`/{{ duck.type }}/start_testing`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                resultsContainer.innerHTML = `
-                    <div class="alert alert-success">
-                        <h4>Test Results</h4>
-                        <p>Average Reward: ${data.results.average_reward}</p>
-                        <p>Success Rate: ${data.results.success_rate}%</p>
-                    </div>
-                `;
-                updateStepStatus(3, 'completed');
-            } else {
-                resultsContainer.innerHTML = `
-                    <div class="alert alert-danger">
-                        Testing failed: ${data.error}
-                    </div>
-                `;
-                updateStepStatus(3, 'error');
-            }
-        } catch (error) {
-            resultsContainer.innerHTML = `
-                <div class="alert alert-danger">
-                    Error: ${error.message}
-                </div>
-            `;
-            updateStepStatus(3, 'error');
-        }
-    });
-
-    async function pollTrainingProgress(taskId) {
-        try {
-            const response = await fetch(`/{{ duck.type }}/training_status/${taskId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                progressBars[1].style.width = `${data.status.progress || 0}%`;
-                addLogEntry(data.status.message || 'Training in progress...', 'info', 2);
-                
-                if (data.status.progress < 100) {
-                    setTimeout(() => pollTrainingProgress(taskId), 5000);
-                } else {
-                    addLogEntry('Training completed!', 'success', 2);
-                    updateStepStatus(2, 'completed');
-                    updateStepStatus(3, 'active');
-                    
-                    // Enable testing form
-                    testingForm.querySelector('button').disabled = false;
-                }
-            } else {
-                addLogEntry(`Error checking progress: ${data.error}`, 'error', 2);
-                updateStepStatus(2, 'error');
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 2);
-            updateStepStatus(2, 'error');
-        }
-    }
-
-    // Initially disable training and testing forms
-    trainingForm.querySelector('button').disabled = true;
-    testingForm.querySelector('button').disabled = true;
 
     // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
+    if (window.bootstrap && window.bootstrap.Tooltip) {
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+    
+    // Handle training form if it exists
+    if (trainingForm) {
+        trainingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Training form submitted - functionality to be implemented");
+            // Training functionality would be implemented here
+        });
+    }
+    
+    // Handle testing form if it exists
+    if (testingForm) {
+        testingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Testing form submitted - functionality to be implemented");
+            // Testing functionality would be implemented here
+        });
+    }
+    
     // Validation ranges
     const validationRanges = {
         dx_max: { min: 0.01, max: 0.1 },
@@ -843,134 +767,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.gait-customization input').forEach(input => {
         input.addEventListener('input', () => validateInput(input));
     });
-
-    // Handle polynomial fitting
-    document.getElementById('fit-polynomials').addEventListener('click', async function() {
-        try {
-            const response = await fetch(`/{{ duck.type }}/fit_polynomials`, {
-                method: 'POST'
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                addLogEntry('Polynomials fitted successfully', 'success', 1);
-                // Show plot if available
-                if (data.plot_url) {
-                    window.open(data.plot_url, '_blank');
-                }
-            } else {
-                addLogEntry(`Polynomial fitting failed: ${data.error}`, 'error', 1);
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 1);
-        }
-    });
-
-    // Handle motion replay
-    document.getElementById('replay-motion').addEventListener('click', async function() {
-        try {
-            const response = await fetch(`/{{ duck.type }}/replay_motion`, {
-                method: 'POST'
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                addLogEntry('Motion replay started', 'success', 1);
-                // Open visualization in new window if available
-                if (data.visualization_url) {
-                    window.open(data.visualization_url, '_blank');
-                }
-            } else {
-                addLogEntry(`Motion replay failed: ${data.error}`, 'error', 1);
-            }
-        } catch (error) {
-            addLogEntry(`Error: ${error.message}`, 'error', 1);
-        }
-    });
-
-    // Handle motion download
-    document.getElementById('download-motion').addEventListener('click', async function() {
-        try {
-            const response = await fetch(`/{{ duck.type }}/download_motion`, {
-                method: 'POST'
-            });
-            
-            if (response.ok) {
-                // Get the filename from the Content-Disposition header if available
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = 'motion.json';
-                if (contentDisposition) {
-                    const matches = /filename="(.+)"/.exec(contentDisposition);
-                    if (matches) {
-                        filename = matches[1];
-                    }
-                }
-                
-                // Create a blob from the response
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                addLogEntry('Motion file downloaded successfully', 'success', 1);
-            } else {
-                const data = await response.json();
-                addLogEntry(`Download failed: ${data.error || 'Unknown error'}`, 'error', 1);
-            }
-        } catch (error) {
-            addLogEntry(`Error downloading motion: ${error.message}`, 'error', 1);
-        }
-    });
-
-    // Playground handling
-    const playgroundContainer = document.getElementById('playground-container');
-    const launchPlaygroundBtn = document.getElementById('launch-playground');
-    let playgroundRunning = false;
-
-    launchPlaygroundBtn.addEventListener('click', async function() {
-        try {
-            if (!playgroundRunning) {
-                // Launch playground
-                const response = await fetch(`/{{ duck.type }}/launch_playground`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    playgroundRunning = true;
-                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Playground';
-                    launchPlaygroundBtn.classList.remove('btn-info');
-                    launchPlaygroundBtn.classList.add('btn-danger');
-                    addLogEntry('Playground launched successfully', 'success', 1);
-                } else {
-                    addLogEntry(`Failed to launch playground: ${data.error}`, 'error', 1);
-                }
-            } else {
-                // Stop playground
-                const response = await fetch(`/{{ duck.type }}/close_playground`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    playgroundRunning = false;
-                    launchPlaygroundBtn.innerHTML = '<i class="fas fa-play"></i> Launch Playground';
-                    launchPlaygroundBtn.classList.remove('btn-danger');
-                    launchPlaygroundBtn.classList.add('btn-info');
-                    addLogEntry('Playground closed', 'success', 1);
-                } else {
-                    addLogEntry(`Failed to close playground: ${data.error}`, 'error', 1);
-                }
-            }
-        } catch (error) {
-            addLogEntry(`Error managing playground: ${error.message}`, 'error', 1);
-        }
-    });
+    
+    console.log("DEBUG-HTML: Duck page initialization complete");
 });
 </script>
 {% endblock %} 

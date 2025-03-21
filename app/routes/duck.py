@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, jsonify, request
+from flask import Blueprint, render_template, redirect, url_for, jsonify, request, send_file
 from datetime import datetime
 from pathlib import Path
 from ..config import DUCK_TYPES, TRAINED_MODELS_DIR
@@ -6,6 +6,7 @@ from ..services.open_duck_mini_playground import OpenDuckPlaygroundService
 from ..services.awd import AWDService
 from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
+import logging
 
 class DuckBlueprint(Blueprint):
     """Blueprint for handling duck-related routes and views."""
@@ -13,6 +14,9 @@ class DuckBlueprint(Blueprint):
     def __init__(self, name, import_name, **kwargs):
         super().__init__(name, import_name, **kwargs)
         self.workspace_root = Path(__file__).parent.parent.parent
+        
+        # Initialize logger
+        self.logger = logging.getLogger(f"{__name__}.{name}")
         
         # Initialize services
         self.playground_service = OpenDuckPlaygroundService(self.workspace_root)
@@ -125,28 +129,63 @@ class DuckBlueprint(Blueprint):
         def generate_motion():
             """Generate motion for a specific duck type."""
             try:
-                data = request.get_json()
-                variant = data.get('variant')
-                mode = data.get('mode', 'auto')
-                params = data.get('params', {})
+                # Debug incoming request
+                self.logger.debug(f"Incoming motion generation request for duck type: {self.name}")
+                self.logger.debug(f"Request form data: {request.form}")
+                self.logger.debug(f"Request args: {request.args}")
                 
+                # Handle form data instead of JSON
+                data = request.form.to_dict()
+                variant = request.args.get('variant')
+                mode = data.get('mode', 'auto')
+                
+                self.logger.info(f"Processing motion generation request - Duck: {self.name}, Variant: {variant}, Mode: {mode}")
+                self.logger.debug(f"Form parameters: {data}")
+                
+                # Remove mode from data since we're passing it separately
+                if 'mode' in data:
+                    del data['mode']
+                    
+                # Call the service with all the parameters
+                self.logger.debug(f"Calling motion service with params: duck_type={self.name}, variant={variant}, mode={mode}, and {len(data)} additional parameters")
                 success, message, output = self.motion_service.generate_motion(
                     duck_type=self.name,
                     variant=variant,
                     mode=mode,
-                    **params
+                    **data  # Pass remaining form data as params
                 )
                 
+                self.logger.debug(f"Service returned: success={success}, message={message}")
+                
+                if not success:
+                    self.logger.error(f"Motion generation failed: {message}")
+                    if output and isinstance(output, dict):
+                        self.logger.error(f"Error details: {output}")
+                    return jsonify({
+                        'success': False,
+                        'error': message,  # Using 'error' instead of 'message' to match frontend expectations
+                        'details': output
+                    })
+                
+                self.logger.info(f"Motion generation completed successfully")
                 return jsonify({
                     'success': success,
                     'message': message,
-                    'output': output
+                    'motion_data': output  # Change 'output' to 'motion_data' to match frontend expectation
                 })
                 
             except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                self.logger.error(f"Unexpected error in motion generation: {str(e)}")
+                self.logger.error(f"Traceback: {error_details}")
                 return jsonify({
                     'success': False,
-                    'message': f'Error generating motion: {str(e)}'
+                    'error': f"Error generating motion: {str(e)}",  # Using 'error' instead of 'message'
+                    'details': {
+                        'traceback': error_details,
+                        'error': str(e)
+                    }
                 })
                 
         @self.route('/deploy', methods=['POST'])
@@ -236,24 +275,198 @@ class DuckBlueprint(Blueprint):
 
         @self.route('/check_motion_files', methods=['GET'])
         def check_motion_files():
-            """Check available motion files for a specific duck type."""
+            """Check if motion files are available for the current duck type."""
+            try:
+                variant = request.args.get('variant', None)
+                duck_type = request.path.split('/')[1]
+                self.logger.debug(f"check_motion_files called for {duck_type} (variant: {variant})")
+                
+                # Get internal name based on duck_type and variant
+                internal_name = self.get_internal_duck_name(duck_type, variant)
+                self.logger.debug(f"Mapped to internal duck name: {internal_name}")
+                
+                # Log request details for debugging
+                debug_info = {
+                    "url_path": request.path,
+                    "duck_type": duck_type,
+                    "variant": variant,
+                    "internal_name": internal_name,
+                    "request_args": dict(request.args),
+                    "request_headers": dict(request.headers)
+                }
+                self.logger.debug(f"Request details: {debug_info}")
+                
+                # Check for motion files
+                files = self.motion_service.list_motion_files(internal_name)
+                self.logger.debug(f"Found motion files: {files}")
+                
+                return jsonify({
+                    "success": True,
+                    "files": files,
+                    "debug_info": debug_info
+                })
+            except Exception as e:
+                self.logger.error(f"Error checking motion files: {str(e)}", exc_info=True)
+                return jsonify({
+                    "success": False,
+                    "error": str(e),
+                    "debug_info": {
+                        "exception": str(e),
+                        "traceback": traceback.format_exc()
+                    }
+                })
+        
+        @self.route('/check_training_files', methods=['GET'])
+        def check_training_files():
+            """Check if training files are available for the current duck type."""
+            try:
+                variant = request.args.get('variant', None)
+                duck_type = request.path.split('/')[1]
+                self.logger.debug(f"check_training_files called for {duck_type} (variant: {variant})")
+                
+                # Get internal name based on duck_type and variant
+                internal_name = self.get_internal_duck_name(duck_type, variant)
+                self.logger.debug(f"Mapped to internal duck name: {internal_name}")
+                
+                # Debug info
+                debug_info = {
+                    "url_path": request.path,
+                    "duck_type": duck_type,
+                    "variant": variant,
+                    "internal_name": internal_name
+                }
+                
+                # Check for training files
+                # You would implement this method in your service
+                files = self.motion_service.list_training_files(internal_name)
+                
+                return jsonify({
+                    "success": True,
+                    "files": files,
+                    "debug_info": debug_info
+                })
+            except Exception as e:
+                self.logger.error(f"Error checking training files: {str(e)}", exc_info=True)
+                return jsonify({
+                    "success": False,
+                    "error": str(e),
+                    "debug_info": {
+                        "exception": str(e),
+                        "traceback": traceback.format_exc()
+                    }
+                })
+        
+        @self.route('/check_testing_files', methods=['GET'])
+        def check_testing_files():
+            """Check if testing files are available for the current duck type."""
+            try:
+                variant = request.args.get('variant', None)
+                duck_type = request.path.split('/')[1]
+                self.logger.debug(f"check_testing_files called for {duck_type} (variant: {variant})")
+                
+                # Get internal name based on duck_type and variant
+                internal_name = self.get_internal_duck_name(duck_type, variant)
+                self.logger.debug(f"Mapped to internal duck name: {internal_name}")
+                
+                # Debug info
+                debug_info = {
+                    "url_path": request.path,
+                    "duck_type": duck_type,
+                    "variant": variant,
+                    "internal_name": internal_name
+                }
+                
+                # Check for testing files
+                # You would implement this method in your service
+                files = self.motion_service.list_testing_files(internal_name)
+                
+                return jsonify({
+                    "success": True,
+                    "files": files,
+                    "debug_info": debug_info
+                })
+            except Exception as e:
+                self.logger.error(f"Error checking testing files: {str(e)}", exc_info=True)
+                return jsonify({
+                    "success": False,
+                    "error": str(e),
+                    "debug_info": {
+                        "exception": str(e),
+                        "traceback": traceback.format_exc()
+                    }
+                })
+
+        @self.route('/download_motion', methods=['POST'])
+        def download_motion():
+            """Download the latest generated motion file."""
             try:
                 variant = request.args.get('variant')
+                
+                # Find the latest motion file
                 motion_files = self.motion_service.list_motion_files(
                     duck_type=self.name,
                     variant=variant
                 )
                 
-                return jsonify({
-                    'success': True,
-                    'files': motion_files
-                })
+                if not motion_files:
+                    return jsonify({
+                        'success': False,
+                        'error': 'No motion files available'
+                    }), 404
+                
+                # Get the most recent file
+                latest_file = motion_files[0]
+                file_path = self.workspace_root / latest_file['path']
+                
+                if not file_path.exists():
+                    self.logger.error(f"Motion file does not exist: {file_path}")
+                    return jsonify({
+                        'success': False,
+                        'error': 'Motion file not found'
+                    }), 404
+                
+                self.logger.info(f"Downloading motion file: {file_path}")
+                
+                # Return the file as an attachment
+                return send_file(
+                    file_path,
+                    as_attachment=True,
+                    download_name=latest_file['name'],
+                    mimetype='application/json'
+                )
                 
             except Exception as e:
+                self.logger.error(f"Error downloading motion file: {str(e)}")
+                self.logger.error(traceback.format_exc())
                 return jsonify({
                     'success': False,
-                    'message': f'Error checking motion files: {str(e)}'
-                })
+                    'error': f'Error downloading motion file: {str(e)}'
+                }), 500
+
+    def get_internal_duck_name(self, duck_type, variant):
+        """
+        Maps URL path duck type and variant to internal duck name used in the system.
+        """
+        if duck_type == 'bdx':
+            if variant == 'go2':
+                return 'go2_bdx'
+            elif variant == 'cybergear':
+                return 'cybergear_bdx'
+            elif variant == 'servo':
+                return 'servo_bdx'
+            else:  # Default is go1 or any unknown variant
+                return 'go_bdx'
+        elif duck_type == 'open_duck_mini':
+            if variant == 'v1':
+                return 'open_duck_mini_v1'
+            elif variant == 'v3':
+                return 'open_duck_mini_v3'
+            else:  # Default is v2 or any unknown variant
+                return 'open_duck_mini_v2'
+        
+        # If no mapping exists, return the duck_type as is
+        self.logger.warning(f"No internal name mapping for duck_type: {duck_type}, variant: {variant}")
+        return duck_type
 
 # Create blueprint instance
 duck = DuckBlueprint('duck', __name__) 
