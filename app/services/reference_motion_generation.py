@@ -308,58 +308,49 @@ class ReferenceMotionGenerationService:
                 'error': str(e),
                 'traceback': traceback.format_exc()
             }
-
-    def fit_polynomials(self, motion_files: List[str]) -> Tuple[bool, str, Optional[str]]:
-        """Fit polynomials to reference motion data."""
+        
+    def gait_playground(self, 
+                       duck_type: str, 
+                       variant: str = None,
+                       **params) -> Tuple[bool, str, Optional[Dict]]:
+        """Gait playground for reference motions for the duck."""
         try:
-            cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + motion_files
-            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
+            self.logger.info(f"Starting gait playground for {duck_type} (variant: {variant})")
+            self.logger.debug(f"Parameters received: {params}")
             
-            if not success:
-                return False, "Polynomial fitting failed", stderr
-                
-            return True, "Polynomial fitting completed successfully", stdout
+            # Add more detailed parameter logging
+            self.logger.info("----- Gait Playground Parameters -----")
+            self.logger.info(f"Duck Type: {duck_type}")
+            self.logger.info(f"Variant: {variant}")
             
+            # Log all parameters with their types
+            for key, value in params.items():
+                self.logger.info(f"Parameter: {key} = {value} (type: {type(value).__name__})")
+            
+            self.logger.info("---------------------------------------")
+            
+            # Get duck information using the internal name
+            duck_info = duck_config.get_config_by_internal_name(duck_type)
+            if duck_info:
+                self.logger.info(f"Found duck configuration for internal name {duck_type}")
+                self.logger.debug(f"Duck Type: {duck_info['duck_type']}, Variant: {duck_info['variant']}")
+            else:
+                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+
+            cmd = ['uv', 'run', '--active', 'open_duck_reference_motion_generator/gait_playground.py']
+                    
+            # Use the internal duck_type name which is expected by the script
+            cmd.extend(['--duck', duck_type])
+            self.logger.info(f"Using duck type '{duck_type}' for auto_waddle.py script")
+
         except Exception as e:
-            return False, f"Error fitting polynomials: {str(e)}", None
-
-    def replay_motion(self, motion_file: str) -> Tuple[bool, str, Optional[str]]:
-        """Replay a reference motion."""
-        try:
-            cmd = ['uv', 'run', '--active', 'scripts/replay_motion.py', '--motion_file', motion_file]
-            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
-            
-            if not success:
-                return False, "Motion replay failed", stderr
-                
-            return True, "Motion replay started successfully", stdout
-            
-        except Exception as e:
-            return False, f"Error replaying motion: {str(e)}", None
-
-    def plot_polynomials(self, pkl_file: str, output_dir: str) -> Tuple[bool, str, Optional[Dict]]:
-        """Plot polynomial coefficients."""
-        try:
-            cmd = ['uv', 'run', '--active', 'scripts/plot_polynomials.py', '--pkl_file', pkl_file, '--output_dir', output_dir]
-            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
-            
-            if not success:
-                return False, "Polynomial plotting failed", None
-                
-            # Get list of generated plot files
-            plot_files = []
-            output_path = Path(output_dir)
-            for plot_file in output_path.glob('*.png'):
-                plot_files.append(str(plot_file))
-                
-            return True, "Polynomial plots generated successfully", {
-                'plots': plot_files,
-                'output': stdout
+            self.logger.error(f"Unexpected error in motion generation: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Motion generation failed: {str(e)}", {
+                'error': str(e),
+                'traceback': traceback.format_exc()
             }
-            
-        except Exception as e:
-            return False, f"Error plotting polynomials: {str(e)}", None
-
+        
     def list_motion_files(self, duck_type: str, variant: str = None) -> List[str]:
         """List available motion files for a specific duck type."""
         try:
