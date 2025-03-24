@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}{{ duck.name }} - Bill of Materials{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for(duck.type + '.duck_page') }}">{{ duck.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Bill of Materials</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <h1>Bill of Materials</h1>
+            <p class="lead">Required and optional components for building your {{ duck.name }} {{ duck.variant.name }}.</p>
+
+            <!-- Required Components -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Required Components</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for component in required_components %}
+                                <tr>
+                                    <td>{{ component.name }}</td>
+                                    <td>{{ component.quantity }}</td>
+                                    <td>${{ "%.2f"|format(component.price) }}</td>
+                                    <td>${{ "%.2f"|format(component.price * component.quantity) }}</td>
+                                    <td>
+                                        {% if component.source_url %}
+                                        <a href="{{ component.source_url }}" target="_blank" rel="noopener noreferrer">
+                                            {{ component.source }}
+                                        </a>
+                                        {% else %}
+                                        {{ component.source }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary">
+                                    <td colspan="3"><strong>Total Required Components</strong></td>
+                                    <td><strong>${{ "%.2f"|format(required_components|sum(attribute='price')|float) }}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Optional Components -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Optional Components</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for component in optional_components %}
+                                <tr>
+                                    <td>{{ component.name }}</td>
+                                    <td>{{ component.quantity }}</td>
+                                    <td>${{ "%.2f"|format(component.price) }}</td>
+                                    <td>${{ "%.2f"|format(component.price * component.quantity) }}</td>
+                                    <td>
+                                        {% if component.source_url %}
+                                        <a href="{{ component.source_url }}" target="_blank" rel="noopener noreferrer">
+                                            {{ component.source }}
+                                        </a>
+                                        {% else %}
+                                        {{ component.source }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-secondary">
+                                    <td colspan="3"><strong>Total Optional Components</strong></td>
+                                    <td><strong>${{ "%.2f"|format(optional_components|sum(attribute='price')|float) }}</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Calculator -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Cost Calculator</h2>
+                </div>
+                <div class="card-body">
+                    <form id="costCalculator">
+                        <div class="mb-3">
+                            <label class="form-label">Optional Components</label>
+                            {% for component in optional_components %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="{{ component.price * component.quantity }}" 
+                                       id="optional_{{ loop.index }}" name="optional_components">
+                                <label class="form-check-label" for="optional_{{ loop.index }}">
+                                    {{ component.name }} - ${{ "%.2f"|format(component.price * component.quantity) }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Shipping</label>
+                            <select class="form-select" id="shipping" name="shipping">
+                                <option value="0">Standard Shipping (Free)</option>
+                                <option value="10">Express Shipping ($10.00)</option>
+                            </select>
+                        </div>
+                        <div class="alert alert-primary">
+                            <h3 class="h5 mb-0">Total Cost: <span id="totalCost">${{ "%.2f"|format(required_components|sum(attribute='price')|float) }}</span></h3>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Quick Links</h2>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{{ url_for(duck.type + '.stl_models') }}" class="list-group-item list-group-item-action">
+                            STL Models
+                        </a>
+                        <a href="{{ url_for(duck.type + '.assembly') }}" class="list-group-item list-group-item-action">
+                            Assembly Guide
+                        </a>
+                        <a href="{{ url_for(duck.type + '.playground') }}" class="list-group-item list-group-item-action">
+                            Test in Playground
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Printing Options</h2>
+                </div>
+                <div class="card-body">
+                    <h3 class="h5">Bambu X1</h3>
+                    <p>Download pre-sliced G-Code files optimized for the Bambu X1 printer.</p>
+                    <a href="#" class="btn btn-primary">Download G-Code</a>
+
+                    <h3 class="h5 mt-4">Other Printers</h3>
+                    <p>Download STL files to slice for your preferred printer.</p>
+                    <a href="{{ url_for(duck.type + '.stl_models') }}" class="btn btn-secondary">Download STL</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calculator = document.getElementById('costCalculator');
+    const totalCost = document.getElementById('totalCost');
+    const baseCost = {{ required_components|sum(attribute='price')|float }};
+
+    function updateTotal() {
+        let total = baseCost;
+        
+        // Add selected optional components
+        document.querySelectorAll('input[name="optional_components"]:checked').forEach(checkbox => {
+            total += parseFloat(checkbox.value);
+        });
+        
+        // Add shipping
+        total += parseFloat(document.getElementById('shipping').value);
+        
+        totalCost.textContent = `$${total.toFixed(2)}`;
+    }
+
+    calculator.addEventListener('change', updateTotal);
+});
+</script>
+{% endblock %}
+{% endblock %} 

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}{{ duck.name }} - STL Models{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for(duck.type + '.duck_page') }}">{{ duck.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">STL Models</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <h1>STL Models</h1>
+            <p class="lead">Download and print the 3D models for your {{ duck.name }} {{ duck.variant.name }}.</p>
+
+            <!-- STL Parts -->
+            <div class="row">
+                {% for part in stl_parts %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="card-title">{{ part.name }}</h3>
+                            <div class="model-viewer mb-3" style="height: 200px;">
+                                <model-viewer
+                                    src="{{ part.model_url }}"
+                                    alt="{{ part.name }}"
+                                    camera-controls
+                                    auto-rotate
+                                    camera-orbit="45deg 55deg 2.5m"
+                                    shadow-intensity="1"
+                                    exposure="1"
+                                    environment-image="neutral"
+                                    style="width: 100%; height: 100%;"
+                                ></model-viewer>
+                            </div>
+                            <p class="card-text">{{ part.description }}</p>
+                            <ul class="list-unstyled">
+                                <li><strong>Print Time:</strong> {{ part.print_time }}</li>
+                                <li><strong>Material:</strong> {{ part.material }}</li>
+                                <li><strong>Support Needed:</strong> {{ part.support_needed }}</li>
+                            </ul>
+                            <div class="btn-group">
+                                <a href="{{ part.stl_url }}" class="btn btn-primary">
+                                    <i class="fas fa-download"></i> Download STL
+                                </a>
+                                {% if part.gcode_url %}
+                                <a href="{{ part.gcode_url }}" class="btn btn-secondary">
+                                    <i class="fas fa-download"></i> Download G-Code
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Printing Instructions -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Printing Instructions</h2>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="printingAccordion">
+                        <!-- General Guidelines -->
+                        <div class="accordion-item">
+                            <h3 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#generalGuidelines">
+                                    General Guidelines
+                                </button>
+                            </h3>
+                            <div id="generalGuidelines" class="accordion-collapse collapse show" data-bs-parent="#printingAccordion">
+                                <div class="accordion-body">
+                                    <ul>
+                                        <li>Use high-quality PLA or PETG filament</li>
+                                        <li>Ensure your printer is properly calibrated</li>
+                                        <li>Check bed adhesion before starting long prints</li>
+                                        <li>Monitor the first few layers of each print</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bambu X1 Settings -->
+                        <div class="accordion-item">
+                            <h3 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#bambuSettings">
+                                    Bambu X1 Settings
+                                </button>
+                            </h3>
+                            <div id="bambuSettings" class="accordion-collapse collapse" data-bs-parent="#printingAccordion">
+                                <div class="accordion-body">
+                                    <ul>
+                                        <li>Layer Height: 0.2mm</li>
+                                        <li>Infill: 20%</li>
+                                        <li>Support: Tree (Auto)</li>
+                                        <li>Build Plate: Textured PEI</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Other Printers -->
+                        <div class="accordion-item">
+                            <h3 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#otherPrinters">
+                                    Other Printers
+                                </button>
+                            </h3>
+                            <div id="otherPrinters" class="accordion-collapse collapse" data-bs-parent="#printingAccordion">
+                                <div class="accordion-body">
+                                    <ul>
+                                        <li>Layer Height: 0.2mm</li>
+                                        <li>Infill: 20%</li>
+                                        <li>Support: Tree or Grid</li>
+                                        <li>Build Plate: Heated bed with adhesive</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Quick Links</h2>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{{ url_for(duck.type + '.bom') }}" class="list-group-item list-group-item-action">
+                            Bill of Materials
+                        </a>
+                        <a href="{{ url_for(duck.type + '.assembly') }}" class="list-group-item list-group-item-action">
+                            Assembly Guide
+                        </a>
+                        <a href="{{ url_for(duck.type + '.playground') }}" class="list-group-item list-group-item-action">
+                            Test in Playground
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Printing Tips</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Clean your build plate before printing
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Use a brim for better adhesion
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Keep your filament dry
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Monitor print progress
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+{% endblock %}
+{% endblock %} 

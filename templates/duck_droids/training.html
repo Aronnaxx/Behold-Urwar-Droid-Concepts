@@ -1,0 +1,870 @@
+{% extends "base.html" %}
+
+{% block title %}{{ duck.name }} - Training{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tab-content {
+        padding: 20px;
+        background-color: var(--bs-dark);
+        border: 1px solid var(--bs-gray-700);
+        border-radius: 0.25rem;
+        margin-top: 1rem;
+    }
+    .nav-tabs {
+        border-bottom: 1px solid var(--bs-gray-700);
+    }
+    .nav-tabs .nav-link {
+        color: var(--bs-gray-300);
+        border: none;
+        border-bottom: 2px solid transparent;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--bs-gray-100);
+        border: none;
+        border-bottom: 2px solid var(--bs-gray-600);
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--bs-primary);
+        background-color: transparent;
+        border: none;
+        border-bottom: 2px solid var(--bs-primary);
+    }
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-label {
+        color: var(--bs-gray-300);
+    }
+    .form-control {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-gray-700);
+        color: var(--bs-gray-100);
+    }
+    .form-control:focus {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-primary);
+        color: var(--bs-gray-100);
+    }
+    .model-viewer {
+        width: 100%;
+        height: 400px;
+        background-color: var(--bs-gray-900);
+        border-radius: 0.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .workflow-step {
+        background-color: var(--bs-gray-800);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--bs-gray-700);
+    }
+    .workflow-step.completed {
+        border-color: var(--bs-success);
+    }
+    .workflow-step.active {
+        border-color: var(--bs-primary);
+    }
+    .workflow-step h3 {
+        color: var(--bs-primary);
+        margin-bottom: 1rem;
+    }
+    .workflow-step .step-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--bs-primary);
+        margin-right: 0.5rem;
+    }
+    .workflow-step .step-status {
+        float: right;
+        color: var(--bs-success);
+    }
+    .workflow-step .step-status.pending {
+        color: var(--bs-gray-500);
+    }
+    .workflow-step .step-status.error {
+        color: var(--bs-danger);
+    }
+    .preview-section {
+        display: none;
+        margin-top: 1rem;
+    }
+    .preview-section canvas {
+        width: 100%;
+        height: 200px;
+        background-color: var(--bs-gray-900);
+        border-radius: 0.25rem;
+    }
+    .log-output {
+        max-height: 400px;
+        overflow-y: auto;
+        background-color: var(--bs-gray-900);
+        padding: 1rem;
+        border-radius: 0.25rem;
+        font-family: monospace;
+        margin-top: 1rem;
+    }
+    .log-entry {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+        background-color: var(--bs-gray-800);
+    }
+    .log-entry.success {
+        background-color: rgba(25, 135, 84, 0.1);
+        border: 1px solid var(--bs-success);
+        color: var(--bs-success);
+    }
+    .log-entry.error {
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 1px solid var(--bs-danger);
+        color: var(--bs-danger);
+    }
+    .log-summary {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .log-details {
+        background-color: var(--bs-gray-900);
+        border: 1px solid var(--bs-gray-700);
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        white-space: pre-wrap;
+        overflow-x: auto;
+    }
+    .command-output, .error-traceback {
+        margin: 0.5rem 0;
+        padding: 0.5rem;
+        background-color: var(--bs-gray-800);
+        border: 1px solid var(--bs-gray-700);
+        border-radius: 0.25rem;
+        font-family: monospace;
+    }
+    .command-line {
+        font-weight: bold;
+        margin: 0.5rem 0;
+        color: var(--bs-gray-300);
+    }
+    .toggle-details {
+        background-color: var(--bs-gray-700);
+        border: none;
+        color: var(--bs-gray-300);
+        border-radius: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        margin: 0.5rem 0;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+    .toggle-details:hover {
+        background-color: var(--bs-gray-600);
+    }
+    .duck-specs {
+        background-color: var(--bs-gray-800);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .duck-specs h3 {
+        color: var(--bs-primary);
+        margin-bottom: 1rem;
+    }
+    .duck-specs .spec-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--bs-gray-700);
+    }
+    .duck-specs .spec-item:last-child {
+        border-bottom: none;
+    }
+    .duck-specs .spec-label {
+        color: var(--bs-gray-300);
+    }
+    .duck-specs .spec-value {
+        color: var(--bs-primary);
+        font-weight: bold;
+    }
+    .advanced-options {
+        display: none;
+    }
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .file-status {
+        font-size: 0.9rem;
+        color: var(--bs-gray-500);
+        margin-top: 0.5rem;
+    }
+    .file-status.available {
+        color: var(--bs-success);
+    }
+    .file-status.missing {
+        color: var(--bs-danger);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for(duck.type + '.duck_page') }}">{{ duck.name }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Training</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="duck-specs">
+                <h3>{{ duck.name }}</h3>
+                <p>{{ duck.description }}</p>
+                
+                <div class="form-group mb-3">
+                    <label for="variant-select" class="form-label">Variant</label>
+                    <select class="form-control" id="variant-select" onchange="window.location.href = '{{ url_for(duck.type + '.training') }}?variant=' + this.value">
+                        {% for variant_id, variant in variants.items() %}
+                        <option value="{{ variant_id }}" {% if variant_id == duck.variant.id %}selected{% endif %}>
+                            {{ variant.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <model-viewer
+                    src="{{ duck.variant.model_path }}"
+                    alt="{{ duck.name }} 3D Model"
+                    auto-rotate
+                    camera-controls
+                    shadow-intensity="1"
+                    class="model-viewer">
+                </model-viewer>
+                
+                <div class="spec-item">
+                    <span class="spec-label">Height</span>
+                    <span class="spec-value">1.2m</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Weight</span>
+                    <span class="spec-value">5kg</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Battery Life</span>
+                    <span class="spec-value">4 hours</span>
+                </div>
+                
+                <h3 class="mt-4">Features</h3>
+                <ul class="list-unstyled">
+                    {% for feature in duck.features %}
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        {{ feature }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="workflow-step active" id="step1">
+                <h3><span class="step-number">1</span> Generate Reference Motion</h3>
+                <div class="step-status pending">Pending</div>
+                
+                <form id="motion-form">
+                    <div class="form-group">
+                        <label for="mode-select" class="form-label">Mode</label>
+                        <select class="form-control" id="mode-select" name="mode">
+                            <option value="auto">Auto Waddle</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+                    </div>
+
+                    <div id="auto-mode-options">
+                        <div class="form-group">
+                            <label for="generation-type" class="form-label">Generation Type</label>
+                            <select class="form-control" id="generation-type" name="generation_type">
+                                <option value="single">Single Motion</option>
+                                <option value="sweep">Parameter Sweep</option>
+                                <option value="random">Random Motions</option>
+                            </select>
+                        </div>
+
+                        <div id="single-motion-params">
+                            <div class="form-group">
+                                <label for="motion-type" class="form-label">Motion Type</label>
+                                <select class="form-control" id="motion-type" name="motion_type">
+                                    <option value="walk">Walking</option>
+                                    <option value="run">Running</option>
+                                    <option value="jump">Jumping</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="duration" class="form-label">Duration (seconds)</label>
+                                <input type="number" class="form-control" id="duration" name="duration" value="5" step="0.1">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="speed" class="form-label">Speed (m/s)</label>
+                                <input type="number" class="form-control" id="speed" name="speed" value="0.5" step="0.1">
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="num-motions-group" style="display: none;">
+                            <label for="num-motions" class="form-label">Number of Motions</label>
+                            <input type="number" class="form-control" id="num-motions" name="num_motions" value="10" min="1" max="100">
+                            <div class="form-text">Generate multiple random motions (1-100)</div>
+                        </div>
+                    </div>
+
+                    <div id="advanced-options" class="advanced-options" style="display: none;">
+                        <div class="form-group">
+                            <label for="motion-type" class="form-label">Motion Type</label>
+                            <select class="form-control" id="motion-type" name="motion_type">
+                                <option value="walk">Walking</option>
+                                <option value="run">Running</option>
+                                <option value="jump">Jumping</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="duration" class="form-label">Duration (seconds)</label>
+                            <input type="number" class="form-control" id="duration" name="duration" value="5" step="0.1">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="speed" class="form-label">Speed (m/s)</label>
+                            <input type="number" class="form-control" id="speed" name="speed" value="0.5" step="0.1">
+                        </div>
+
+                        <h4 class="mt-3">Gait Customization</h4>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dx_max" class="form-label">Maximum Forward Speed (dx_max)</label>
+                            <input type="number" class="form-control" id="dx_max" name="dx_max" value="0.05" step="0.01" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum forward velocity of the center of mass (m/s)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dy_max" class="form-label">Maximum Lateral Speed (dy_max)</label>
+                            <input type="number" class="form-control" id="dy_max" name="dy_max" value="0.05" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum lateral velocity of the center of mass (m/s)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="dtheta_max" class="form-label">Maximum Rotation Speed (dtheta_max)</label>
+                            <input type="number" class="form-control" id="dtheta_max" name="dtheta_max" value="0.25" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Maximum angular velocity of the body (rad/s)">
+                            <div class="invalid-feedback">Value must be between 0.1 and 0.5 rad/s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_com_height" class="form-label">COM Height During Walk</label>
+                            <input type="number" class="form-control" id="walk_com_height" name="walk_com_height" value="0.2" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Height of the center of mass during walking (m)">
+                            <div class="invalid-feedback">Value must be between 0.1 and 0.3 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_foot_height" class="form-label">Foot Height During Walk</label>
+                            <input type="number" class="form-control" id="walk_foot_height" name="walk_foot_height" value="0.05" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Height of the foot during the swing phase (m)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.1 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_trunk_pitch" class="form-label">Trunk Pitch During Walk</label>
+                            <input type="number" class="form-control" id="walk_trunk_pitch" name="walk_trunk_pitch" value="0.0" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Pitch angle of the trunk during walking (rad)">
+                            <div class="invalid-feedback">Value must be between -0.2 and 0.2 rad</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="walk_foot_rise_ratio" class="form-label">Foot Rise Ratio</label>
+                            <input type="number" class="form-control" id="walk_foot_rise_ratio" name="walk_foot_rise_ratio" value="0.5" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Ratio of the swing phase duration to the total step duration">
+                            <div class="invalid-feedback">Value must be between 0.3 and 0.7</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="single_support_duration" class="form-label">Single Support Duration</label>
+                            <input type="number" class="form-control" id="single_support_duration" name="single_support_duration" value="0.5" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Duration of the single support phase (s)">
+                            <div class="invalid-feedback">Value must be between 0.3 and 0.7 s</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="feet_spacing" class="form-label">Feet Spacing</label>
+                            <input type="number" class="form-control" id="feet_spacing" name="feet_spacing" value="0.1" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Distance between the feet during walking (m)">
+                            <div class="invalid-feedback">Value must be between 0.05 and 0.2 m</div>
+                        </div>
+                        <div class="form-group gait-customization" style="display: none;">
+                            <label for="zmp_margin" class="form-label">ZMP Margin</label>
+                            <input type="number" class="form-control" id="zmp_margin" name="zmp_margin" value="0.02" step="0.01"
+                                   data-bs-toggle="tooltip" data-bs-placement="right"
+                                   title="Margin for the Zero Moment Point (m)">
+                            <div class="invalid-feedback">Value must be between 0.01 and 0.05 m</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Generate Motion</button>
+                        <button type="button" id="launch-playground" class="btn btn-info">
+                            <i class="fas fa-play"></i> Launch Playground
+                        </button>
+                    </div>
+                    <div class="file-status" id="motion-file-status">
+                        <i class="fas fa-spinner fa-spin"></i> Checking motion files...
+                    </div>
+                </form>
+
+                <div class="preview-section">
+                    <h3>Motion Preview</h3>
+                    <canvas id="motion-preview"></canvas>
+                    <div class="d-flex gap-2 mt-2">
+                        <button id="download-motion" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download Motion
+                        </button>
+                        <button id="fit-polynomials" class="btn btn-warning">
+                            <i class="fas fa-chart-line"></i> Plot Polynomials
+                        </button>
+                        <button id="replay-motion" class="btn btn-info">
+                            <i class="fas fa-play"></i> Replay Motion
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <label class="form-label">Generation Progress</label>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="log-output"></div>
+                </div>
+            </div>
+
+            <div class="workflow-step" id="step2">
+                <h3><span class="step-number">2</span> Train Policy</h3>
+                <div class="step-status pending">Pending</div>
+                
+                <form id="training-config-form">
+                    <div class="form-group">
+                        <label for="model-type" class="form-label">Model Type</label>
+                        <select class="form-control" id="model-type" name="model_type">
+                            <option value="ppo">PPO</option>
+                            <option value="sac">SAC</option>
+                            <option value="td3">TD3</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="num-steps" class="form-label">Number of Steps</label>
+                        <input type="number" class="form-control" id="num-steps" name="num_steps" value="1000000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="learning-rate" class="form-label">Learning Rate</label>
+                        <input type="number" class="form-control" id="learning-rate" name="learning_rate" value="0.0003" step="0.0001">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Start Training</button>
+                    <div class="file-status" id="training-file-status">
+                        <i class="fas fa-spinner fa-spin"></i> Checking training files...
+                    </div>
+                </form>
+                
+                <div class="mt-4">
+                    <h3>Training Progress</h3>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="log-output mt-3"></div>
+                </div>
+            </div>
+
+            <div class="workflow-step" id="step3">
+                <h3><span class="step-number">3</span> Test in Playground</h3>
+                <div class="step-status pending">Pending</div>
+                
+                <form id="testing-config-form">
+                    <div class="form-group">
+                        <label for="test-episodes" class="form-label">Number of Episodes</label>
+                        <input type="number" class="form-control" id="test-episodes" name="test_episodes" value="10">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="test-model" class="form-label">Model to Test</label>
+                        <select class="form-control" id="test-model" name="test_model">
+                            <option value="latest">Latest Model</option>
+                            <option value="best">Best Model</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Start Testing</button>
+                    <div class="file-status" id="testing-file-status">
+                        <i class="fas fa-spinner fa-spin"></i> Checking testing files...
+                    </div>
+                </form>
+                
+                <div class="mt-4">
+                    <h3>Test Results</h3>
+                    <div class="results-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<script src="{{ url_for('static', filename='js/reference_motions.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // This script handles UI elements not managed by reference_motions.js
+    console.log("DEBUG-HTML: Duck page initialization started");
+    
+    const trainingForm = document.getElementById('training-config-form');
+    const testingForm = document.getElementById('testing-config-form');
+    const numMotionsGroup = document.getElementById('num-motions-group');
+    const generationType = document.getElementById('generation-type');
+    const motionFileStatus = document.getElementById('motion-file-status');
+    const trainingFileStatus = document.getElementById('training-file-status');
+    const testingFileStatus = document.getElementById('testing-file-status');
+    const modeSelect = document.getElementById('mode-select');
+    const autoModeOptions = document.getElementById('auto-mode-options');
+    const advancedOptions = document.getElementById('advanced-options');
+    
+    console.log("DEBUG-HTML: UI elements initialized");
+    
+    // Check file availability on page load
+    checkFileAvailability();
+    
+    // Show/hide generation type options
+    generationType.addEventListener('change', function() {
+        console.log("DEBUG-HTML: Generation type changed:", this.value);
+        if (this.value === 'random') {
+            numMotionsGroup.style.display = 'block';
+        } else {
+            numMotionsGroup.style.display = 'none';
+        }
+    });
+
+    // Handle mode selection
+    modeSelect.addEventListener('change', function() {
+        console.log("DEBUG-HTML: Mode changed:", this.value);
+        const isAdvanced = this.value === 'advanced';
+        autoModeOptions.style.display = isAdvanced ? 'none' : 'block';
+        advancedOptions.style.display = isAdvanced ? 'block' : 'none';
+        
+        // Show/hide gait customization fields
+        const gaitCustomizationFields = document.querySelectorAll('.gait-customization');
+        gaitCustomizationFields.forEach(field => {
+            field.style.display = isAdvanced ? 'block' : 'none';
+        });
+    });
+
+    // Initial state
+    autoModeOptions.style.display = 'block';
+    advancedOptions.style.display = 'none';
+    numMotionsGroup.style.display = generationType.value === 'random' ? 'block' : 'none';
+
+    async function checkFileAvailability() {
+        try {
+            console.log("DEBUG-HTML: Starting file availability check");
+            console.log("DEBUG-HTML: Current URL:", window.location.href);
+            console.log("DEBUG-HTML: Current pathname:", window.location.pathname);
+            
+            // Extract duck type and variant from URL
+            const pathParts = window.location.pathname.split('/').filter(p => p);
+            const urlDuckType = pathParts.length > 0 ? pathParts[0] : 'open_duck_mini';
+            const urlParams = new URLSearchParams(window.location.search);
+            const variant = urlParams.get('variant');
+            
+            console.log(`DEBUG-HTML: File availability check for duck type: "${urlDuckType}", variant: "${variant || 'none'}"`);
+            console.log("DEBUG-HTML: Path parts:", pathParts);
+            
+            // Check motion files
+            try {
+                const motionUrl = `/${urlDuckType}/check_motion_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking motion files at URL:", motionUrl);
+                
+                const motionResponse = await fetch(motionUrl);
+                console.log("DEBUG-HTML: Motion response status:", motionResponse.status);
+                const motionText = await motionResponse.text();
+                console.log("DEBUG-HTML: Motion response text:", motionText);
+                
+                let motionData;
+                try {
+                    motionData = JSON.parse(motionText);
+                    console.log("DEBUG-HTML: Motion data:", motionData);
+                    updateFileStatus(motionFileStatus, motionData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing motion response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", motionText);
+                    updateFileStatus(motionFileStatus, false);
+                }
+            } catch (motionError) {
+                console.error("DEBUG-HTML: Error fetching motion files:", motionError);
+                updateFileStatus(motionFileStatus, false);
+            }
+            
+            // Check training files
+            try {
+                const trainingUrl = `/${urlDuckType}/check_training_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking training files at URL:", trainingUrl);
+                
+                const trainingResponse = await fetch(trainingUrl);
+                console.log("DEBUG-HTML: Training response status:", trainingResponse.status);
+                const trainingText = await trainingResponse.text();
+                console.log("DEBUG-HTML: Training response text:", trainingText);
+                
+                let trainingData;
+                try {
+                    trainingData = JSON.parse(trainingText);
+                    console.log("DEBUG-HTML: Training data:", trainingData);
+                    updateFileStatus(trainingFileStatus, trainingData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing training response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", trainingText);
+                    updateFileStatus(trainingFileStatus, false);
+                }
+            } catch (trainingError) {
+                console.error("DEBUG-HTML: Error fetching training files:", trainingError);
+                updateFileStatus(trainingFileStatus, false);
+            }
+            
+            // Check testing files
+            try {
+                const testingUrl = `/${urlDuckType}/check_testing_files${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Checking testing files at URL:", testingUrl);
+                
+                const testingResponse = await fetch(testingUrl);
+                console.log("DEBUG-HTML: Testing response status:", testingResponse.status);
+                const testingText = await testingResponse.text();
+                console.log("DEBUG-HTML: Testing response text:", testingText);
+                
+                let testingData;
+                try {
+                    testingData = JSON.parse(testingText);
+                    console.log("DEBUG-HTML: Testing data:", testingData);
+                    updateFileStatus(testingFileStatus, testingData.success);
+                } catch (parseError) {
+                    console.error("DEBUG-HTML: Error parsing testing response:", parseError);
+                    console.error("DEBUG-HTML: Raw response:", testingText);
+                    updateFileStatus(testingFileStatus, false);
+                }
+            } catch (testingError) {
+                console.error("DEBUG-HTML: Error fetching testing files:", testingError);
+                updateFileStatus(testingFileStatus, false);
+            }
+
+            // Update button states
+            updateButtonStates();
+            console.log("DEBUG-HTML: File availability check complete");
+            
+        } catch (error) {
+            console.error('DEBUG-HTML: Error in checkFileAvailability:', error);
+        }
+    }
+
+    function updateFileStatus(element, available) {
+        console.log(`DEBUG-HTML: Updating file status element to ${available ? 'available' : 'missing'}`);
+        element.innerHTML = available 
+            ? '<i class="fas fa-check"></i> Required files available'
+            : '<i class="fas fa-times"></i> Required files missing';
+        element.className = `file-status ${available ? 'available' : 'missing'}`;
+    }
+
+    function updateButtonStates() {
+        console.log("DEBUG-HTML: Updating button states");
+        const trainingButton = trainingForm?.querySelector('button');
+        const testingButton = testingForm?.querySelector('button');
+        
+        if (trainingButton) {
+            trainingButton.disabled = !trainingFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Training button disabled:", trainingButton.disabled);
+        }
+        
+        if (testingButton) {
+            testingButton.disabled = !testingFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Testing button disabled:", testingButton.disabled);
+        }
+    }
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    if (window.bootstrap && window.bootstrap.Tooltip) {
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+    
+    // Handle training form if it exists
+    if (trainingForm) {
+        trainingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Training form submitted - functionality to be implemented");
+            // Training functionality would be implemented here
+        });
+    }
+    
+    // Handle testing form if it exists
+    if (testingForm) {
+        testingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Testing form submitted - functionality to be implemented");
+            // Testing functionality would be implemented here
+        });
+    }
+    
+    // Validation ranges
+    const validationRanges = {
+        dx_max: { min: 0.01, max: 0.1 },
+        dy_max: { min: 0.01, max: 0.1 },
+        dtheta_max: { min: 0.1, max: 0.5 },
+        walk_com_height: { min: 0.1, max: 0.3 },
+        walk_foot_height: { min: 0.01, max: 0.1 },
+        walk_trunk_pitch: { min: -0.2, max: 0.2 },
+        walk_foot_rise_ratio: { min: 0.3, max: 0.7 },
+        single_support_duration: { min: 0.3, max: 0.7 },
+        feet_spacing: { min: 0.05, max: 0.2 },
+        zmp_margin: { min: 0.01, max: 0.05 }
+    };
+
+    // Validate input fields
+    function validateInput(input) {
+        const field = input.id;
+        const value = parseFloat(input.value);
+        const range = validationRanges[field];
+        
+        if (range && (value < range.min || value > range.max)) {
+            input.classList.add('is-invalid');
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            return true;
+        }
+    }
+
+    // Add validation listeners to all gait customization fields
+    document.querySelectorAll('.gait-customization input').forEach(input => {
+        input.addEventListener('input', () => validateInput(input));
+    });
+    
+    console.log("DEBUG-HTML: Duck page initialization complete");
+});
+
+// Direct script to handle the Generate Motion button
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DEBUG-HTML: Direct button handler initialization");
+    
+    // Find the generate motion button
+    const generateButton = document.querySelector('#motion-form button[type="submit"]');
+    if (generateButton) {
+        console.log("DEBUG-HTML: Found Generate Motion button:", generateButton);
+        
+        generateButton.addEventListener('click', async function(e) {
+            e.preventDefault();
+            console.log("DEBUG-HTML: Generate Motion button clicked directly");
+            
+            try {
+                // Get form data and URL info
+                const form = document.getElementById('motion-form');
+                const formData = new FormData(form);
+                
+                // Get duck type from URL
+                const pathParts = window.location.pathname.split('/').filter(p => p);
+                const duckType = pathParts.length > 0 ? pathParts[0] : 'open_duck_mini';
+                
+                // Get variant from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const variant = urlParams.get('variant');
+                
+                console.log(`DEBUG-HTML: Generating motion for ${duckType}, variant: ${variant}`);
+                console.log("DEBUG-HTML: Form data:");
+                for (let [key, value] of formData.entries()) {
+                    console.log(`  ${key}: ${value}`);
+                }
+                
+                // Show progress in UI
+                const progressBar = document.querySelector('.progress-bar');
+                const logOutput = document.querySelector('.log-output');
+                if (progressBar) progressBar.style.width = '20%';
+                if (logOutput) {
+                    logOutput.innerHTML = '<div class="log-entry">Starting motion generation process...</div>';
+                }
+                
+                // Create the URL for the request
+                const url = `/${duckType}/generate_motion${variant ? `?variant=${variant}` : ''}`;
+                console.log("DEBUG-HTML: Submitting to URL:", url);
+                
+                // Execute fetch request
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log("DEBUG-HTML: Response status:", response.status);
+                if (progressBar) progressBar.style.width = '60%';
+                
+                // Process response
+                const data = await response.json();
+                console.log("DEBUG-HTML: Response data:", data);
+                
+                // Update UI with result
+                if (logOutput) {
+                    if (data.success) {
+                        if (progressBar) progressBar.style.width = '100%';
+                        logOutput.innerHTML += '<div class="log-entry success">Motion generated successfully!</div>';
+                        
+                        if (data.motion_data && data.motion_data.output) {
+                            logOutput.innerHTML += '<div class="log-entry info">Command output:</div>';
+                            logOutput.innerHTML += `<div class="log-entry code"><pre>${data.motion_data.output}</pre></div>`;
+                        }
+                    } else {
+                        if (progressBar) progressBar.style.width = '100%';
+                        const errorMessage = data.error || 'Unknown error occurred';
+                        logOutput.innerHTML += `<div class="log-entry error">Error: ${errorMessage}</div>`;
+                        
+                        if (data.details) {
+                            if (data.details.output) {
+                                logOutput.innerHTML += '<div class="log-entry info">Command output:</div>';
+                                logOutput.innerHTML += `<div class="log-entry code"><pre>${data.details.output}</pre></div>`;
+                            }
+                            if (data.details.traceback) {
+                                logOutput.innerHTML += '<div class="log-entry info">Error traceback:</div>';
+                                logOutput.innerHTML += `<div class="log-entry code"><pre>${data.details.traceback}</pre></div>`;
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error("DEBUG-HTML: Error in motion generation:", error);
+                const logOutput = document.querySelector('.log-output');
+                const progressBar = document.querySelector('.progress-bar');
+                
+                if (progressBar) progressBar.style.width = '100%';
+                if (logOutput) {
+                    logOutput.innerHTML += `<div class="log-entry error">Error: ${error.message}</div>`;
+                }
+            }
+        });
+    } else {
+        console.error("DEBUG-HTML: Generate Motion button not found!");
+    }
+});
+</script>
+{% endblock %} 
