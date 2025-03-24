@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}{{ duck.name }} - Updates{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for(duck.type + '.duck_page') }}">{{ duck.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Updates</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <h1>Updates & Maintenance</h1>
+            <p class="lead">Keep your {{ duck.name }} {{ duck.variant.name }} up to date with the latest firmware and models.</p>
+
+            <!-- Firmware Updates -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Firmware Updates</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h3 class="h5">Current Version: 1.0.0</h3>
+                        <p class="mb-0">Last checked: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <h3 class="h5">Update Methods</h3>
+                        <div class="list-group">
+                            <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#otaUpdateModal">
+                                <i class="fas fa-wifi"></i> Over-the-Air Update
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#usbUpdateModal">
+                                <i class="fas fa-usb"></i> USB Update
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Updates -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Model Updates</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Version</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for model in trained_models %}
+                                <tr>
+                                    <td>{{ model.name }}</td>
+                                    <td>{{ model.version }}</td>
+                                    <td>{{ model.date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="updateModel('{{ model.path }}')">
+                                            Update
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance Schedule -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Maintenance Schedule</h2>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <h3 class="h5">Daily</h3>
+                            <ul>
+                                <li>Check battery level</li>
+                                <li>Inspect for loose connections</li>
+                                <li>Clean sensors</li>
+                            </ul>
+                        </div>
+                        <div class="timeline-item">
+                            <h3 class="h5">Weekly</h3>
+                            <ul>
+                                <li>Full battery cycle</li>
+                                <li>Check for firmware updates</li>
+                                <li>Inspect mechanical components</li>
+                            </ul>
+                        </div>
+                        <div class="timeline-item">
+                            <h3 class="h5">Monthly</h3>
+                            <ul>
+                                <li>Deep cleaning</li>
+                                <li>Calibrate sensors</li>
+                                <li>Check for model updates</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Quick Links</h2>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{{ url_for(duck.type + '.troubleshooting') }}" class="list-group-item list-group-item-action">
+                            Troubleshooting Guide
+                        </a>
+                        <a href="{{ url_for(duck.type + '.assembly') }}" class="list-group-item list-group-item-action">
+                            Assembly Guide
+                        </a>
+                        <a href="{{ url_for(duck.type + '.playground') }}" class="list-group-item list-group-item-action">
+                            Test in Playground
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Update Tips</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Backup your data before updating
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Ensure stable power supply
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Don't interrupt updates
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Test after updates
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- OTA Update Modal -->
+<div class="modal fade" id="otaUpdateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Over-the-Air Update</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Please ensure your droid is connected to a stable WiFi network and has sufficient battery life.
+                </div>
+                <div class="progress mb-3">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <button class="btn btn-primary" onclick="startOTAUpdate()">
+                    Start Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- USB Update Modal -->
+<div class="modal fade" id="usbUpdateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">USB Update</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ol>
+                    <li>Connect your droid via USB</li>
+                    <li>Open Chrome/Edge browser</li>
+                    <li>Allow USB connection when prompted</li>
+                    <li>Click "Start Update" below</li>
+                </ol>
+                <button class="btn btn-primary" onclick="startUSBUpdate()">
+                    Start Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function startOTAUpdate() {
+    // Implementation for OTA update
+    const progressBar = document.querySelector('.progress-bar');
+    let progress = 0;
+    
+    const interval = setInterval(() => {
+        progress += 10;
+        progressBar.style.width = `${progress}%`;
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            // Show success message
+            alert('Update completed successfully!');
+        }
+    }, 1000);
+}
+
+function startUSBUpdate() {
+    // Implementation for USB update
+    alert('USB update started. Please keep the connection stable.');
+}
+
+function updateModel(modelPath) {
+    // Implementation for model update
+    alert(`Updating model: ${modelPath}`);
+}
+</script>
+{% endblock %}
+{% endblock %} 

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}{{ duck.name }} - Assembly Guide{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for(duck.type + '.duck_page') }}">{{ duck.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Assembly Guide</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <h1>Assembly Guide</h1>
+            <p class="lead">Step-by-step instructions for assembling your {{ duck.name }} {{ duck.variant.name }}.</p>
+
+            <!-- Assembly Steps -->
+            <div class="accordion" id="assemblyAccordion">
+                {% for step in assembly_steps %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#step{{ loop.index }}">
+                            Step {{ loop.index }}: {{ step.title }}
+                        </button>
+                    </h2>
+                    <div id="step{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" 
+                         data-bs-parent="#assemblyAccordion">
+                        <div class="accordion-body">
+                            {% if step.image %}
+                            <div class="mb-3">
+                                <img src="{{ step.image }}" alt="{{ step.title }}" class="img-fluid rounded">
+                            </div>
+                            {% endif %}
+                            <div class="step-content">
+                                {{ step.content | safe }}
+                            </div>
+                            {% if step.tips %}
+                            <div class="alert alert-info mt-3">
+                                <h4 class="h5">Tips:</h4>
+                                <ul class="mb-0">
+                                    {% for tip in step.tips %}
+                                    <li>{{ tip }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Tools Required -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Tools Required</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3 class="h5">Basic Tools</h3>
+                            <ul>
+                                <li>3D Printer</li>
+                                <li>Allen Wrenches (2mm, 3mm)</li>
+                                <li>Phillips Head Screwdriver</li>
+                                <li>Wire Strippers</li>
+                                <li>Soldering Iron</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 class="h5">Additional Tools</h3>
+                            <ul>
+                                <li>Heat Gun</li>
+                                <li>Multimeter</li>
+                                <li>Hot Glue Gun</li>
+                                <li>Super Glue</li>
+                                <li>Wire Cutters</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Quick Links</h2>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{{ url_for(duck.type + '.bom') }}" class="list-group-item list-group-item-action">
+                            Bill of Materials
+                        </a>
+                        <a href="{{ url_for(duck.type + '.stl_models') }}" class="list-group-item list-group-item-action">
+                            STL Models
+                        </a>
+                        <a href="{{ url_for(duck.type + '.playground') }}" class="list-group-item list-group-item-action">
+                            Test in Playground
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Assembly Tips</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Read all steps before starting
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Organize parts before assembly
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Take your time with each step
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success"></i>
+                            Double-check connections
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

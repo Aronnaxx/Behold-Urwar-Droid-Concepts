@@ -101,7 +101,311 @@ class DuckBlueprint(Blueprint):
                                 duck=duck_data,
                                 trained_models=trained_models,
                                 variants=variants)
-                                
+
+        @self.route('/stl_models')
+        def stl_models():
+            """Render the STL models page for a specific duck type."""
+            duck_type = self.name
+            variant_id = request.args.get('variant')
+            
+            # Get duck type config and validate
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return redirect(url_for('main.index'))
+            
+            # Get variant info
+            variants = duck_type_config.get('variants', {})
+            if not variants:
+                return redirect(url_for('main.index'))
+            
+            if not variant_id:
+                variant_id = list(variants.keys())[0]
+            
+            variant = variants.get(variant_id)
+            if not variant:
+                return redirect(url_for('main.index'))
+            
+            # Create duck data object
+            duck_data = {
+                'name': duck_type_config.get('name', duck_type),
+                'type': duck_type,
+                'variant': {
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'model_path': variant.get('model_path', ''),
+                    'description': variant.get('description', '')
+                }
+            }
+            
+            # Get STL parts data from config
+            stl_parts = duck_type_config.get('stl_parts', [])
+            
+            return render_template('duck_droids/stl_models.html',
+                                duck=duck_data,
+                                stl_parts=stl_parts,
+                                variants=variants)
+
+        @self.route('/bom')
+        def bom():
+            """Render the Bill of Materials page for a specific duck type."""
+            duck_type = self.name
+            variant_id = request.args.get('variant')
+            
+            # Get duck type config and validate
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return redirect(url_for('main.index'))
+            
+            # Get variant info
+            variants = duck_type_config.get('variants', {})
+            if not variants:
+                return redirect(url_for('main.index'))
+            
+            if not variant_id:
+                variant_id = list(variants.keys())[0]
+            
+            variant = variants.get(variant_id)
+            if not variant:
+                return redirect(url_for('main.index'))
+            
+            # Create duck data object
+            duck_data = {
+                'name': duck_type_config.get('name', duck_type),
+                'type': duck_type,
+                'variant': {
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'model_path': variant.get('model_path', ''),
+                    'description': variant.get('description', '')
+                }
+            }
+            
+            # Get BOM data from config
+            required_components = duck_type_config.get('required_components', [])
+            optional_components = duck_type_config.get('optional_components', [])
+            
+            return render_template('duck_droids/bom.html',
+                                duck=duck_data,
+                                required_components=required_components,
+                                optional_components=optional_components,
+                                variants=variants)
+
+        @self.route('/playground')
+        def playground():
+            """Render the playground page for testing the droid."""
+            duck_type = self.name
+            variant_id = request.args.get('variant')
+            
+            # Get duck type config and validate
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return redirect(url_for('main.index'))
+            
+            # Get variant info
+            variants = duck_type_config.get('variants', {})
+            if not variants:
+                return redirect(url_for('main.index'))
+            
+            if not variant_id:
+                variant_id = list(variants.keys())[0]
+            
+            variant = variants.get(variant_id)
+            if not variant:
+                return redirect(url_for('main.index'))
+            
+            # Create duck data object
+            duck_data = {
+                'name': duck_type_config.get('name', duck_type),
+                'type': duck_type,
+                'variant': {
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'model_path': variant.get('model_path', ''),
+                    'description': variant.get('description', '')
+                }
+            }
+            
+            # Get trained models for this variant
+            trained_models = self.get_trained_models(duck_type, variant_id)
+            
+            return render_template('duck_droids/playground.html',
+                                duck=duck_data,
+                                trained_models=trained_models,
+                                variants=variants)
+
+        @self.route('/training')
+        def training():
+            """Render the training page for a specific duck type."""
+            duck_type = self.name
+            variant_id = request.args.get('variant')
+            
+            # Get duck type config and validate
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return redirect(url_for('main.index'))
+            
+            # Get variant info
+            variants = duck_type_config.get('variants', {})
+            if not variants:
+                return redirect(url_for('main.index'))
+            
+            if not variant_id:
+                variant_id = list(variants.keys())[0]
+            
+            variant = variants.get(variant_id)
+            if not variant:
+                return redirect(url_for('main.index'))
+            
+            # Create duck data object
+            duck_data = {
+                'name': duck_type_config.get('name', duck_type),
+                'type': duck_type,
+                'variant': {
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'model_path': variant.get('model_path', ''),
+                    'description': variant.get('description', '')
+                }
+            }
+            
+            # Get motion files for this variant
+            internal_name = self.get_internal_duck_name(duck_type, variant_id)
+            motion_files = self.motion_service.list_motion_files(internal_name)
+            
+            return render_template('duck_droids/training.html',
+                                duck=duck_data,
+                                motion_files=motion_files,
+                                variants=variants)
+
+        @self.route('/updates')
+        def updates():
+            """Render the updates page for a specific duck type."""
+            duck_type = self.name
+            variant_id = request.args.get('variant')
+            
+            # Get duck type config and validate
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return redirect(url_for('main.index'))
+            
+            # Get variant info
+            variants = duck_type_config.get('variants', {})
+            if not variants:
+                return redirect(url_for('main.index'))
+            
+            if not variant_id:
+                variant_id = list(variants.keys())[0]
+            
+            variant = variants.get(variant_id)
+            if not variant:
+                return redirect(url_for('main.index'))
+            
+            # Create duck data object
+            duck_data = {
+                'name': duck_type_config.get('name', duck_type),
+                'type': duck_type,
+                'variant': {
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'model_path': variant.get('model_path', ''),
+                    'description': variant.get('description', '')
+                }
+            }
+            
+            # Get trained models for this variant
+            trained_models = self.get_trained_models(duck_type, variant_id)
+            
+            return render_template('duck_droids/updates.html',
+                                duck=duck_data,
+                                trained_models=trained_models,
+                                variants=variants)
+
+        @self.route('/troubleshooting')
+        def troubleshooting():
+            """Render the troubleshooting page for a specific duck type."""
+            duck_type = self.name
+            variant_id = request.args.get('variant')
+            
+            # Get duck type config and validate
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return redirect(url_for('main.index'))
+            
+            # Get variant info
+            variants = duck_type_config.get('variants', {})
+            if not variants:
+                return redirect(url_for('main.index'))
+            
+            if not variant_id:
+                variant_id = list(variants.keys())[0]
+            
+            variant = variants.get(variant_id)
+            if not variant:
+                return redirect(url_for('main.index'))
+            
+            # Create duck data object
+            duck_data = {
+                'name': duck_type_config.get('name', duck_type),
+                'type': duck_type,
+                'variant': {
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'model_path': variant.get('model_path', ''),
+                    'description': variant.get('description', '')
+                }
+            }
+            
+            # Get troubleshooting data from config
+            common_issues = duck_type_config.get('common_issues', [])
+            
+            return render_template('duck_droids/troubleshooting.html',
+                                duck=duck_data,
+                                common_issues=common_issues,
+                                variants=variants)
+
+        @self.route('/assembly')
+        def assembly():
+            """Render the assembly guide page for a specific duck type."""
+            duck_type = self.name
+            variant_id = request.args.get('variant')
+            
+            # Get duck type config and validate
+            duck_type_config = duck_config.get_duck_type(duck_type)
+            if not duck_type_config:
+                return redirect(url_for('main.index'))
+            
+            # Get variant info
+            variants = duck_type_config.get('variants', {})
+            if not variants:
+                return redirect(url_for('main.index'))
+            
+            if not variant_id:
+                variant_id = list(variants.keys())[0]
+            
+            variant = variants.get(variant_id)
+            if not variant:
+                return redirect(url_for('main.index'))
+            
+            # Create duck data object
+            duck_data = {
+                'name': duck_type_config.get('name', duck_type),
+                'type': duck_type,
+                'variant': {
+                    'id': variant_id,
+                    'name': variant.get('name', variant_id),
+                    'model_path': variant.get('model_path', ''),
+                    'description': variant.get('description', '')
+                }
+            }
+            
+            # Get assembly steps from config
+            assembly_steps = duck_type_config.get('assembly_steps', [])
+            
+            return render_template('duck_droids/assembly.html',
+                                duck=duck_data,
+                                assembly_steps=assembly_steps,
+                                variants=variants)
+
         @self.route('/train', methods=['POST'])
         def train_duck():
             """Start training for a specific duck type."""
