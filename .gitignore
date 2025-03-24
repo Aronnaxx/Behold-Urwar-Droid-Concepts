@@ -179,4 +179,7 @@ cython_debug/
 # checkpoints/*
 # motion_data/*
 
-output/*
+output/generated_motions/*
+
+# Always include onnx files regardless of the directory
+!*.onnx

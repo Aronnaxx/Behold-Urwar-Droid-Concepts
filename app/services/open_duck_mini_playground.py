@@ -532,44 +532,35 @@ class OpenDuckPlaygroundService:
             
             self.logger.debug(f"Using model path: {model_path}")
             
-            # Validate environment and task
-            if env not in self.available_envs:
-                self.logger.error(f"Invalid environment: {env}")
-                return False, f"Invalid environment: {env}", None
-                
-            if task not in self.available_envs[env]['tasks']:
-                self.logger.error(f"Invalid task: {task} for environment {env}")
-                return False, f"Invalid task: {task} for environment {env}", None
-            
-            # Build command
+            # Build command - only pass the required ONNX model path
             cmd = ['uv', 'run', '--active', f'playground/{duck_type}/mujoco_infer.py']
             cmd.extend(['-o', model_path])
-            cmd.extend(['--env', env])
-            cmd.extend(['--task', task])
-            cmd.extend(['--speed', str(speed)])
             
             self.logger.info(f"Executing command: {' '.join(cmd)}")
             self.logger.debug(f"Working directory: {self.submodule_dir}")
             
-            # Run command
-            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
+            # Get current environment and ensure DISPLAY is set
+            current_env = os.environ.copy()
+            if 'DISPLAY' not in current_env:
+                current_env['DISPLAY'] = ':0'  # Default to primary display
             
-            if not success:
-                self.logger.error("Playground launch failed")
-                self.logger.error(f"Command output: {stdout}")
-                self.logger.error(f"Error output: {stderr}")
-                return False, "Playground launch failed", {
-                    'command': ' '.join(cmd),
-                    'stdout': stdout,
-                    'stderr': stderr
-                }
+            # Run command using Popen without capturing output
+            process = subprocess.Popen(
+                cmd,
+                cwd=str(self.submodule_dir),
+                env=current_env,
+                stdout=None,  # Don't capture stdout
+                stderr=None,  # Don't capture stderr
+                creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0  # Windows-specific flag
+            )
+            
+            # Store process for later management if needed
+            self._current_playground_process = process
             
             self.logger.info("Playground launched successfully")
             return True, "Playground launched successfully", {
                 'model_path': model_path,
-                'env': env,
-                'task': task,
-                'speed': speed
+                'process_id': process.pid
             }
             
         except Exception as e:

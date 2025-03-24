@@ -183,13 +183,13 @@ class DuckRoutes:
                 model = request.args.get('model', 'latest')
                 env = request.args.get('env', 'joystick')
                 task = request.args.get('task', 'flat_terrain')
-                speed = float(request.args.get('speed', 1.0))
+                speed = int(request.args.get('speed', 50))  # Changed to int and default 50
                 
                 # First, let's check what models are available
                 available_models = self.playground_service.find_available_models(internal_name)
-                self.logger.info(f"Found {len(available_models)} available models")
+                logger.info(f"Found {len(available_models)} available models")
                 for model_info in available_models:
-                    self.logger.info(f"Model: {model_info}")
+                    logger.info(f"Model: {model_info}")
                 
                 # Launch the playground
                 success, message, data = self.playground_service.launch_playground(
@@ -211,7 +211,49 @@ class DuckRoutes:
                     'success': False,
                     'message': f"Error launching playground: {str(e)}"
                 }), 500
+
+        @self.app.route('/<duck_type>/playground/train')
+        def train_model(duck_type):
+            """Start training a model using the playground."""
+            try:
+                # Get variant from query parameters
+                variant = request.args.get('variant')
                 
+                # Get the internal name using duck_config
+                internal_name = self.get_internal_duck_type(duck_type, variant)
+                if not internal_name:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Invalid duck type or variant: {duck_type}/{variant}'
+                    }), 400
+                
+                # Get training parameters
+                env = request.args.get('env', 'joystick')
+                task = request.args.get('task', 'flat_terrain')
+                num_timesteps = int(request.args.get('num_timesteps', 150000000))
+                restore_checkpoint_path = request.args.get('restore_checkpoint_path')
+                
+                # Start training
+                success, message, data = self.playground_service.train_model(
+                    duck_type=internal_name,
+                    env=env,
+                    task=task,
+                    num_timesteps=num_timesteps,
+                    restore_checkpoint_path=restore_checkpoint_path
+                )
+                
+                return jsonify({
+                    'success': success,
+                    'message': message,
+                    'data': data
+                })
+            except Exception as e:
+                logger.error(f"Error starting training for {duck_type}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'message': f"Error starting training: {str(e)}"
+                }), 500
+
         # Motion generation routes
         @self.app.route('/<duck_type>/generate_motion', methods=['POST'])
         def generate_motion(duck_type):
