@@ -9,7 +9,7 @@ from typing import Tuple, Optional, List, Dict
 import tempfile
 from datetime import datetime
 import traceback
-from ..config import duck_config
+from ..config import duck_config, TRAINED_MODELS_DIR
 from ..utils.command import run_command
 
 class OpenDuckPlaygroundService:

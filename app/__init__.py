@@ -13,8 +13,8 @@ def create_app(config_class=Config):
     # Get the root directory (where templates are located)
     root_dir = Path(__file__).parent.parent
     app = Flask(__name__, 
-                template_folder=str(root_dir / 'templates'),
-                static_folder=str(root_dir / 'static'))
+                template_folder=str(root_dir / 'app/templates'),
+                static_folder=str(root_dir / 'app/static'))
     
     CORS(app)
     app.config.from_object(config_class)
