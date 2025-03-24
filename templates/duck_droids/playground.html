@@ -221,19 +221,40 @@ document.addEventListener('DOMContentLoaded', function() {
         const model = modelSelect.value;
         const speed = speedControl.value;
         const terrain = terrainSelect.value;
+        const useKeyboard = false;  // Default to false, could add a checkbox for this
 
         // Update UI
         isSimulationRunning = true;
         startButton.disabled = true;
         stopButton.disabled = false;
         updateStatus('connecting');
-
-        // Load the playground URL with parameters
-        const playgroundUrl = `/playground/${model}?speed=${speed}&terrain=${terrain}`;
-        playgroundFrame.src = playgroundUrl;
-
-        // Listen for messages from the playground
-        window.addEventListener('message', handlePlaygroundMessage);
+        
+        // Load iframe with the playground frame
+        playgroundFrame.src = `./playground_frame/${model}?speed=${speed}&terrain=${terrain}`;
+        
+        // Make API call to start the mujoco playground
+        fetch(`./playground/launch_mujoco?model=${model}&speed=${speed}&terrain=${terrain}&keyboard=${useKeyboard}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateStatus('connected');
+                    
+                    // Listen for messages from the playground frame
+                    window.addEventListener('message', handlePlaygroundMessage);
+                } else {
+                    updateStatus('disconnected');
+                    playgroundFrame.src = 'about:blank';
+                    alert(`Failed to launch playground: ${data.message}`);
+                    stopSimulation();
+                }
+            })
+            .catch(error => {
+                updateStatus('disconnected');
+                playgroundFrame.src = 'about:blank';
+                console.error('Error starting playground:', error);
+                alert('Failed to start playground. Please try again.');
+                stopSimulation();
+            });
     }
 
     function stopSimulation() {
@@ -242,21 +263,59 @@ document.addEventListener('DOMContentLoaded', function() {
         startButton.disabled = false;
         stopButton.disabled = true;
         updateStatus('disconnected');
+        
+        // Clear the iframe
         playgroundFrame.src = 'about:blank';
-
+        
         // Remove message listener
         window.removeEventListener('message', handlePlaygroundMessage);
+        
+        // Stop monitoring metrics
+        stopMonitoringMetrics();
     }
-
+    
     function handlePlaygroundMessage(event) {
         if (event.origin !== window.location.origin) return;
-
+        
         const data = event.data;
-        if (data.type === 'status') {
-            updateStatus(data.status);
-        } else if (data.type === 'metrics') {
+        if (data.type === 'metrics') {
             updateMetrics(data.metrics);
         }
+    }
+
+    // Simulated metrics for now - in a real implementation, these would come from the simulation
+    let metricsInterval;
+    
+    function startMonitoringMetrics() {
+        // Simulate metrics updates (in a real implementation, this would get data from the simulation)
+        let stability = 0;
+        let efficiency = 0;
+        let speed = 0;
+        
+        clearInterval(metricsInterval);
+        metricsInterval = setInterval(() => {
+            // Gradually increase metrics for demo purposes
+            stability = Math.min(100, stability + Math.random() * 5);
+            efficiency = Math.min(100, efficiency + Math.random() * 3);
+            speed = Math.min(5, speed + Math.random() * 0.2);
+            
+            updateMetrics({
+                stability: Math.round(stability),
+                efficiency: Math.round(efficiency),
+                speed: speed.toFixed(2)
+            });
+        }, 1000);
+    }
+    
+    function stopMonitoringMetrics() {
+        clearInterval(metricsInterval);
+        
+        // Reset metrics to 0
+        updateMetrics({
+            stability: 0,
+            efficiency: 0,
+            speed: 0
+        });
     }
 
     function updateMetrics(metrics) {
@@ -264,10 +323,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('efficiency-value').textContent = `${metrics.efficiency}%`;
         document.getElementById('speed-value').textContent = `${metrics.speed} m/s`;
 
-        document.querySelectorAll('.progress-bar').forEach(bar => {
-            const value = metrics[bar.parentElement.previousElementSibling.textContent.toLowerCase().replace(' ', '_')];
-            bar.style.width = `${value}%`;
-        });
+        // Update progress bars
+        document.querySelector('.progress-bar:nth-of-type(1)').style.width = `${metrics.stability}%`;
+        document.querySelector('.progress-bar:nth-of-type(2)').style.width = `${metrics.efficiency}%`;
+        document.querySelector('.progress-bar:nth-of-type(3)').style.width = `${(metrics.speed / 5) * 100}%`;
     }
 
     // Event listeners
@@ -275,18 +334,14 @@ document.addEventListener('DOMContentLoaded', function() {
     stopButton.addEventListener('click', stopSimulation);
     speedControl.addEventListener('input', function() {
         if (isSimulationRunning) {
-            playgroundFrame.contentWindow.postMessage({
-                type: 'speed',
-                value: this.value
-            }, '*');
+            // In a real implementation, we'd send this to the simulation
+            console.log('Speed changed to:', this.value);
         }
     });
     terrainSelect.addEventListener('change', function() {
         if (isSimulationRunning) {
-            playgroundFrame.contentWindow.postMessage({
-                type: 'terrain',
-                value: this.value
-            }, '*');
+            // In a real implementation, we'd send this to the simulation
+            console.log('Terrain changed to:', this.value);
         }
     });
 });

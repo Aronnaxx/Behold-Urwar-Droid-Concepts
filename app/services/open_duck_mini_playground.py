@@ -152,39 +152,77 @@ class OpenDuckPlaygroundService:
         except subprocess.CalledProcessError:
             return False
 
-    def infer_model(self, duck_type: str, model_path: str, use_keyboard: bool = False) -> Tuple[bool, str, Optional[str]]:
+    def infer_model(self, duck_type: str, model_path: str = None, use_keyboard: bool = False) -> Tuple[bool, str, Optional[str]]:
         """Run inference using a trained model."""
         try:
+            # If no model path provided, use the latest_best_walk.onnx
+            if not model_path:
+                model_path = str(self.workspace_root / f'trained_models/{duck_type}/latest_best_walk.onnx')
+                self.logger.info(f"Using default model: {model_path}")
+            
+            # Ensure model file exists
+            if not os.path.exists(model_path):
+                return False, f"Model file not found: {model_path}", None
+            
+            # Use our urwar_run.py wrapper instead of direct uv commands
+            script_path = f'submodules/open_duck_playground/playground/{duck_type}/mujoco_infer.py'
+            
             cmd = [
-                'uv', 'run', f'playground/{duck_type}/mujoco_infer.py',
+                str(self.workspace_root / 'urwar_run.py'),
+                script_path,
                 '-o', model_path
             ]
             
             if use_keyboard:
                 cmd.append('-k')
                 
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
+            self.logger.info(f"Executing command: {' '.join(cmd)}")
             
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
+            stdout, stderr, success = run_command(
+                cmd, 
+                str(self.workspace_root),
+                logger=self.logger
+            )
+            
+            if not success:
+                self.logger.error("Inference command failed")
                 return False, "Inference failed", stderr
                 
             return True, "Inference started successfully", stdout
             
         except Exception as e:
+            self.logger.error(f"Error starting inference: {str(e)}")
+            self.logger.error(traceback.format_exc())
             return False, f"Error starting inference: {str(e)}", None
 
     def launch_playground(self, duck_type: str) -> Tuple[bool, str, Optional[str]]:
         """Launch the playground environment."""
         try:
-            cmd = ['uv', 'run', f'playground/{duck_type}/runner.py']
-            stdout, stderr = self.run_command(cmd, str(self.submodule_dir))
+            # Use our urwar_run.py wrapper
+            script_path = f'submodules/open_duck_playground/playground/{duck_type}/runner.py'
             
-            if stderr and not ("Uninstalled" in stderr or "Installed" in stderr):
+            cmd = [
+                str(self.workspace_root / 'urwar_run.py'),
+                script_path
+            ]
+            
+            self.logger.info(f"Executing command: {' '.join(cmd)}")
+            
+            stdout, stderr, success = run_command(
+                cmd, 
+                str(self.workspace_root),
+                logger=self.logger
+            )
+            
+            if not success:
+                self.logger.error("Playground launch failed")
                 return False, "Playground launch failed", stderr
                 
             return True, "Playground launched successfully", stdout
             
         except Exception as e:
+            self.logger.error(f"Error launching playground: {str(e)}")
+            self.logger.error(traceback.format_exc())
             return False, f"Error launching playground: {str(e)}", None
 
     def close_playground(self) -> Tuple[bool, str]:
