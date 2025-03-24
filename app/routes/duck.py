@@ -249,8 +249,9 @@ class DuckBlueprint(Blueprint):
             if not variants:
                 return redirect(url_for('main.index'))
             
+            # If no variant specified, try to get it from the session or default to first variant
             if not variant_id:
-                variant_id = list(variants.keys())[0]
+                variant_id = request.args.get('variant', list(variants.keys())[0])
             
             variant = variants.get(variant_id)
             if not variant:

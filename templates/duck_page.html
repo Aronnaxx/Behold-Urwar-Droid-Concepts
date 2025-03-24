@@ -304,10 +304,10 @@
                 <h3>Build Your Droid</h3>
                 <p>Get started by downloading the STL files and following the assembly guide.</p>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for(duck.type + '.stl_models') }}" class="btn btn-primary">
+                    <a href="{{ url_for(duck.type + '.stl_models', variant=duck.variant.id) }}" class="btn btn-primary">
                         <i class="fas fa-cube"></i> STL Models
                     </a>
-                    <a href="{{ url_for(duck.type + '.bom') }}" class="btn btn-secondary">
+                    <a href="{{ url_for(duck.type + '.bom', variant=duck.variant.id) }}" class="btn btn-secondary">
                         <i class="fas fa-list"></i> Bill of Materials
                     </a>
                 </div>
@@ -317,7 +317,7 @@
                 <h3>Train Your Droid</h3>
                 <p>Generate reference motions and train your droid's walking behavior.</p>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for(duck.type + '.training') }}" class="btn btn-primary">
+                    <a href="{{ url_for(duck.type + '.training', variant=duck.variant.id) }}" class="btn btn-primary">
                         <i class="fas fa-brain"></i> Training Workflow
                     </a>
                     <a href="{{ url_for('main.learn', topic='training') }}" class="btn btn-secondary">
@@ -330,7 +330,7 @@
                 <h3>Test in Playground</h3>
                 <p>Test your trained model in the Mujoco simulation environment.</p>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for(duck.type + '.playground') }}" class="btn btn-primary">
+                    <a href="{{ url_for(duck.type + '.playground', variant=duck.variant.id) }}" class="btn btn-primary">
                         <i class="fas fa-gamepad"></i> Launch Playground
                     </a>
                     <a href="{{ url_for('main.learn', topic='playground') }}" class="btn btn-secondary">
@@ -343,10 +343,10 @@
                 <h3>Maintain Your Droid</h3>
                 <p>Update your droid's software and models.</p>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for(duck.type + '.updates') }}" class="btn btn-primary">
+                    <a href="{{ url_for(duck.type + '.updates', variant=duck.variant.id) }}" class="btn btn-primary">
                         <i class="fas fa-sync"></i> Updates
                     </a>
-                    <a href="{{ url_for(duck.type + '.troubleshooting') }}" class="btn btn-secondary">
+                    <a href="{{ url_for(duck.type + '.troubleshooting', variant=duck.variant.id) }}" class="btn btn-secondary">
                         <i class="fas fa-wrench"></i> Troubleshooting
                     </a>
                 </div>
