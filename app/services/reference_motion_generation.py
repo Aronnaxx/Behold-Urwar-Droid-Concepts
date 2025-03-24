@@ -13,10 +13,20 @@ from ..config import duck_config, GENERATED_MOTIONS_DIR
 from ..utils.command import run_command
 
 class ReferenceMotionGenerationService:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, workspace_root: Path):
+        if cls._instance is None:
+            cls._instance = super(ReferenceMotionGenerationService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, workspace_root: Path):
-        self.workspace_root = workspace_root
-        self.submodule_dir = workspace_root / 'submodules/open_duck_reference_motion_generator'
-        self.logger = logging.getLogger(__name__)
+        if not self._initialized:
+            self.workspace_root = workspace_root
+            self.submodule_dir = workspace_root / 'submodules/open_duck_reference_motion_generator'
+            self.logger = logging.getLogger(__name__)
+            self._initialized = True
         
     def generate_motion(self, 
                        duck_type: str, 
@@ -41,14 +51,18 @@ class ReferenceMotionGenerationService:
             self.logger.info("---------------------------------------")
             
             # Get duck information using the internal name
-            duck_info = duck_config.get_config_by_internal_name(duck_type)
-            if duck_info:
-                self.logger.info(f"Found duck configuration for internal name {duck_type}")
-                self.logger.debug(f"Duck Type: {duck_info['duck_type']}, Variant: {duck_info['variant']}")
-            else:
-                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+            duck_info = duck_config.find_by_internal_name(duck_type)
+            if not duck_info:
+                self.logger.error(f"No duck info found for internal name: {duck_type}")
+                return False, f"No duck info found for internal name: {duck_type}", None
+                
+            base_duck_type = duck_info['duck_type']
+            variant_id = duck_info['variant']  # This will be 'v1', 'v2', etc.
+            self.logger.debug(f"Base duck type: {base_duck_type}, Variant: {variant_id}")
             
-            output_dir = self.workspace_root / GENERATED_MOTIONS_DIR / duck_type
+            # Base directory for the duck type - using variant ID instead of internal name
+            output_dir = self.workspace_root / GENERATED_MOTIONS_DIR / base_duck_type / variant_id
+            self.logger.debug(f"Using output directory: {output_dir}")
             output_dir.mkdir(parents=True, exist_ok=True)
             
             run_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -249,8 +263,8 @@ class ReferenceMotionGenerationService:
                     self.logger.debug(f"Copying {pkl_file} to {dest_pkl}")
                     shutil.copy2(pkl_file, dest_pkl)
                     
-                    # Update latest symlink
-                    latest_link = self.workspace_root / GENERATED_MOTIONS_DIR / f'latest_{duck_type}'
+                    # Update latest symlink - using variant-specific path
+                    latest_link = output_dir / f'latest_{variant_id}'
                     self.logger.debug(f"Updating symlink {latest_link} -> {run_output_dir}")
                     if latest_link.exists():
                         latest_link.unlink()
@@ -258,12 +272,7 @@ class ReferenceMotionGenerationService:
                     
                     # Copy to playground if needed
                     try:
-                        # If we have duck info, use the original duck type for the playground path
-                        playground_duck_type = duck_type
-                        if duck_info:
-                            playground_duck_type = duck_info['duck_type']
-                            
-                        playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / playground_duck_type / 'data' / pkl_file.name
+                        playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / base_duck_type / 'data' / pkl_file.name
                         playground_pkl_path.parent.mkdir(parents=True, exist_ok=True)
                         self.logger.debug(f"Copying {pkl_file} to playground: {playground_pkl_path}")
                         shutil.copy2(pkl_file, playground_pkl_path)
@@ -356,15 +365,18 @@ class ReferenceMotionGenerationService:
         try:
             self.logger.debug(f"Listing motion files for {duck_type} (variant: {variant})")
             
-            # If we have a variant, look up the internal name
-            internal_name = None
-            if variant:
-                internal_name = duck_config.get_internal_name(duck_type, variant)
-                if internal_name:
-                    duck_type = internal_name
+            # Get the base duck type and variant from the internal name
+            duck_info = duck_config.find_by_internal_name(duck_type)
+            if not duck_info:
+                self.logger.warning(f"No duck info found for internal name: {duck_type}")
+                return []
+                
+            base_duck_type = duck_info['duck_type']
+            variant_id = duck_info['variant']  # This will be 'v1', 'v2', etc.
+            self.logger.debug(f"Base duck type: {base_duck_type}, Variant: {variant_id}")
             
-            # Check motion directory
-            motion_dir = self.workspace_root / GENERATED_MOTIONS_DIR / duck_type
+            # Check motion directory using variant ID
+            motion_dir = self.workspace_root / GENERATED_MOTIONS_DIR / base_duck_type / variant_id
             if not motion_dir.exists():
                 self.logger.debug(f"Motion directory does not exist: {motion_dir}")
                 return []

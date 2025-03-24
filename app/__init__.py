@@ -2,7 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from pathlib import Path
 from datetime import datetime
-from .config import Config, OUTPUT_DIR, TRAINED_MODELS_DIR
+from .config import Config, OUTPUT_DIR, TRAINED_MODELS_DIR, GENERATED_MOTIONS_DIR
 from .routes.main import main
 from .routes.duck import DuckBlueprint
 from .routes.routes import DuckRoutes
@@ -33,6 +33,7 @@ def create_app(config_class=Config):
     # Create necessary directories
     OUTPUT_DIR.mkdir(exist_ok=True)
     TRAINED_MODELS_DIR.mkdir(exist_ok=True)
+    GENERATED_MOTIONS_DIR.mkdir(exist_ok=True)
 
     # Create duck type directories from configuration
     from .config import duck_config
@@ -47,6 +48,20 @@ def create_app(config_class=Config):
             for variant_id in duck_config_obj['variants'].keys():
                 (duck_dir / variant_id).mkdir(exist_ok=True)
     
+    # Create duck type directories from configuration
+    from .config import duck_config
+    for duck_type_config in duck_config.list_duck_types():
+        duck_type = duck_type_config['id']
+        duck_dir = GENERATED_MOTIONS_DIR / duck_type
+        duck_dir.mkdir(exist_ok=True)
+        
+        # Get variants for this duck type and create directories for each
+        duck_config_obj = duck_config.get_duck_type(duck_type)
+        if duck_config_obj and 'variants' in duck_config_obj:
+            for variant_id in duck_config_obj['variants'].keys():
+                (duck_dir / variant_id).mkdir(exist_ok=True)
+    
+
     # Register blueprints
     app.register_blueprint(main)
     

@@ -10,10 +10,20 @@ from ..config import duck_config, TRAINED_MODELS_DIR
 from ..utils.command import run_command
 
 class AWDService:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, workspace_root: Path):
+        if cls._instance is None:
+            cls._instance = super(AWDService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, workspace_root: Path):
-        self.workspace_root = workspace_root
-        self.submodule_dir = workspace_root / 'submodules/awd'
-        self.logger = logging.getLogger(__name__)
+        if not self._initialized:
+            self.workspace_root = workspace_root
+            self.submodule_dir = workspace_root / 'submodules/awd'
+            self.logger = logging.getLogger(__name__)
+            self._initialized = True
         
     def train_model(self, duck_type: str, num_envs: int = 2048, motion_file: str = None) -> Tuple[bool, str, Optional[Dict]]:
         """Train a model using Active Whole-Body Control for Humanoids (AWD)."""

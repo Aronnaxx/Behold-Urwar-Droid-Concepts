@@ -2,69 +2,8 @@
 
 {% block title %}{{ duck.name }} - Playground{% endblock %}
 
-{% block extra_css %}
-<style>
-    .playground-container {
-        position: relative;
-        width: 100%;
-        height: 600px;
-        background-color: var(--bs-dark);
-        border-radius: 0.5rem;
-        overflow: hidden;
-        margin-bottom: 1rem;
-    }
-    .playground-controls {
-        position: absolute;
-        bottom: 1rem;
-        left: 1rem;
-        right: 1rem;
-        background-color: rgba(0, 0, 0, 0.8);
-        padding: 1rem;
-        border-radius: 0.5rem;
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
-    .playground-frame {
-        width: 100%;
-        height: 100%;
-        border: none;
-    }
-    .control-group {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    .control-group label {
-        color: var(--bs-light);
-        margin: 0;
-    }
-    .control-group input {
-        width: 100px;
-    }
-    .playground-status {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background-color: rgba(0, 0, 0, 0.8);
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        color: var(--bs-light);
-    }
-    .playground-status.connected {
-        background-color: rgba(25, 135, 84, 0.8);
-    }
-    .playground-status.disconnected {
-        background-color: rgba(220, 53, 69, 0.8);
-    }
-    .playground-status.connecting {
-        background-color: rgba(255, 193, 7, 0.8);
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container">
+<div class="container mt-4">
     <div class="row">
         <div class="col-md-12">
             <nav aria-label="breadcrumb">
@@ -84,81 +23,44 @@
                     <h1 class="card-title">Mujoco Playground</h1>
                     <p class="card-text">Test your {{ duck.name }} in a simulated environment before building the real one.</p>
                     
-                    <div class="playground-container">
-                        <div class="playground-status" id="playground-status">
-                            <i class="fas fa-circle"></i> Disconnected
+                    <div class="mb-4">
+                        <div class="form-group mb-3">
+                            <label for="model-select">Model:</label>
+                            <select class="form-select" id="model-select">
+                                <option value="latest">Latest Model</option>
+                                <option value="best">Best Model</option>
+                                {% for model in available_models %}
+                                <option value="{{ model.id }}">{{ model.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <iframe id="playground-frame" class="playground-frame" src="about:blank"></iframe>
-                        <div class="playground-controls">
-                            <div class="control-group">
-                                <label for="model-select">Model:</label>
-                                <select class="form-select" id="model-select">
-                                    <option value="latest">Latest Model</option>
-                                    <option value="best">Best Model</option>
-                                    {% for model in available_models %}
-                                    <option value="{{ model.id }}">{{ model.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="control-group">
-                                <label for="speed-control">Speed:</label>
-                                <input type="range" class="form-range" id="speed-control" min="0" max="100" value="50">
-                            </div>
-                            <div class="control-group">
-                                <label for="terrain-select">Terrain:</label>
-                                <select class="form-select" id="terrain-select">
-                                    <option value="flat">Flat Ground</option>
-                                    <option value="slope">Slope</option>
-                                    <option value="stairs">Stairs</option>
-                                    <option value="obstacles">Obstacles</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" id="start-simulation">
-                                <i class="fas fa-play"></i> Start
-                            </button>
-                            <button class="btn btn-danger" id="stop-simulation" disabled>
-                                <i class="fas fa-stop"></i> Stop
-                            </button>
+                        
+                        <div class="form-group mb-3">
+                            <label for="env-select">Environment:</label>
+                            <select class="form-select" id="env-select">
+                                <option value="joystick">Joystick Control</option>
+                                <option value="standing">Standing Balance</option>
+                            </select>
                         </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <h3>Performance Metrics</h3>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Stability</h5>
-                                        <div class="progress">
-                                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                                        </div>
-                                        <small class="text-muted" id="stability-value">0%</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Energy Efficiency</h5>
-                                        <div class="progress">
-                                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                                        </div>
-                                        <small class="text-muted" id="efficiency-value">0%</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Speed</h5>
-                                        <div class="progress">
-                                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                                        </div>
-                                        <small class="text-muted" id="speed-value">0 m/s</small>
-                                    </div>
-                                </div>
-                            </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="task-select">Task:</label>
+                            <select class="form-select" id="task-select">
+                                <option value="flat_terrain">Flat Ground</option>
+                                <option value="slope">Sloped Surface</option>
+                                <option value="stairs">Staircase</option>
+                                <option value="obstacles">Obstacle Course</option>
+                            </select>
                         </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="speed-control">Speed:</label>
+                            <input type="range" class="form-range" id="speed-control" min="0" max="100" value="50">
+                        </div>
+                        
+                        <button class="btn btn-primary" id="launch-btn">
+                            <i class="fas fa-play"></i> Launch Playground
+                        </button>
                     </div>
                 </div>
             </div>
@@ -202,147 +104,54 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const playgroundFrame = document.getElementById('playground-frame');
-    const playgroundStatus = document.getElementById('playground-status');
-    const startButton = document.getElementById('start-simulation');
-    const stopButton = document.getElementById('stop-simulation');
+    const launchBtn = document.getElementById('launch-btn');
     const modelSelect = document.getElementById('model-select');
+    const envSelect = document.getElementById('env-select');
+    const taskSelect = document.getElementById('task-select');
     const speedControl = document.getElementById('speed-control');
-    const terrainSelect = document.getElementById('terrain-select');
 
-    let isSimulationRunning = false;
-
-    function updateStatus(status) {
-        playgroundStatus.className = 'playground-status ' + status;
-        playgroundStatus.innerHTML = `<i class="fas fa-circle"></i> ${status.charAt(0).toUpperCase() + status.slice(1)}`;
-    }
-
-    function startSimulation() {
+    launchBtn.addEventListener('click', function() {
         const model = modelSelect.value;
+        const env = envSelect.value;
+        const task = taskSelect.value;
         const speed = speedControl.value;
-        const terrain = terrainSelect.value;
-        const useKeyboard = false;  // Default to false, could add a checkbox for this
+        const variant = '{{ duck.variant.id }}';  // Get the current variant ID
 
-        // Update UI
-        isSimulationRunning = true;
-        startButton.disabled = true;
-        stopButton.disabled = false;
-        updateStatus('connecting');
-        
-        // Load iframe with the playground frame
-        playgroundFrame.src = `./playground_frame/${model}?speed=${speed}&terrain=${terrain}`;
-        
-        // Make API call to start the mujoco playground
-        fetch(`./playground/launch_mujoco?model=${model}&speed=${speed}&terrain=${terrain}&keyboard=${useKeyboard}`)
+        // Debug logging
+        console.log('Launching playground with parameters:', {
+            model: model,
+            env: env,
+            task: task,
+            speed: speed,
+            variant: variant
+        });
+
+        // Disable the button while launching
+        launchBtn.disabled = true;
+        launchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Launching...';
+
+        // Launch the playground with variant parameter
+        const url = `./playground/launch?model=${model}&env=${env}&task=${task}&speed=${speed}&variant=${variant}`;
+        console.log('Launch URL:', url);
+
+        fetch(url)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    updateStatus('connected');
-                    
-                    // Listen for messages from the playground frame
-                    window.addEventListener('message', handlePlaygroundMessage);
+                    alert('Playground launched successfully!');
                 } else {
-                    updateStatus('disconnected');
-                    playgroundFrame.src = 'about:blank';
                     alert(`Failed to launch playground: ${data.message}`);
-                    stopSimulation();
                 }
             })
             .catch(error => {
-                updateStatus('disconnected');
-                playgroundFrame.src = 'about:blank';
-                console.error('Error starting playground:', error);
-                alert('Failed to start playground. Please try again.');
-                stopSimulation();
+                console.error('Error launching playground:', error);
+                alert('Failed to launch playground. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable the button
+                launchBtn.disabled = false;
+                launchBtn.innerHTML = '<i class="fas fa-play"></i> Launch Playground';
             });
-    }
-
-    function stopSimulation() {
-        // Update UI
-        isSimulationRunning = false;
-        startButton.disabled = false;
-        stopButton.disabled = true;
-        updateStatus('disconnected');
-        
-        // Clear the iframe
-        playgroundFrame.src = 'about:blank';
-        
-        // Remove message listener
-        window.removeEventListener('message', handlePlaygroundMessage);
-        
-        // Stop monitoring metrics
-        stopMonitoringMetrics();
-    }
-    
-    function handlePlaygroundMessage(event) {
-        if (event.origin !== window.location.origin) return;
-        
-        const data = event.data;
-        if (data.type === 'metrics') {
-            updateMetrics(data.metrics);
-        }
-    }
-
-    // Simulated metrics for now - in a real implementation, these would come from the simulation
-    let metricsInterval;
-    
-    function startMonitoringMetrics() {
-        // Simulate metrics updates (in a real implementation, this would get data from the simulation)
-        let stability = 0;
-        let efficiency = 0;
-        let speed = 0;
-        
-        clearInterval(metricsInterval);
-        metricsInterval = setInterval(() => {
-            // Gradually increase metrics for demo purposes
-            stability = Math.min(100, stability + Math.random() * 5);
-            efficiency = Math.min(100, efficiency + Math.random() * 3);
-            speed = Math.min(5, speed + Math.random() * 0.2);
-            
-            updateMetrics({
-                stability: Math.round(stability),
-                efficiency: Math.round(efficiency),
-                speed: speed.toFixed(2)
-            });
-        }, 1000);
-    }
-    
-    function stopMonitoringMetrics() {
-        clearInterval(metricsInterval);
-        
-        // Reset metrics to 0
-        updateMetrics({
-            stability: 0,
-            efficiency: 0,
-            speed: 0
-        });
-    }
-
-    function updateMetrics(metrics) {
-        document.getElementById('stability-value').textContent = `${metrics.stability}%`;
-        document.getElementById('efficiency-value').textContent = `${metrics.efficiency}%`;
-        document.getElementById('speed-value').textContent = `${metrics.speed} m/s`;
-
-        // Update progress bars
-        document.querySelector('.progress-bar:nth-of-type(1)').style.width = `${metrics.stability}%`;
-        document.querySelector('.progress-bar:nth-of-type(2)').style.width = `${metrics.efficiency}%`;
-        document.querySelector('.progress-bar:nth-of-type(3)').style.width = `${(metrics.speed / 5) * 100}%`;
-    }
-
-    // Event listeners
-    startButton.addEventListener('click', startSimulation);
-    stopButton.addEventListener('click', stopSimulation);
-    speedControl.addEventListener('input', function() {
-        if (isSimulationRunning) {
-            // In a real implementation, we'd send this to the simulation
-            console.log('Speed changed to:', this.value);
-        }
-    });
-    terrainSelect.addEventListener('change', function() {
-        if (isSimulationRunning) {
-            // In a real implementation, we'd send this to the simulation
-            console.log('Terrain changed to:', this.value);
-        }
     });
 });
 </script>
