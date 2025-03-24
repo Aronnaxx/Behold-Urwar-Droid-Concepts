@@ -179,5 +179,4 @@ cython_debug/
 # checkpoints/*
 # motion_data/*
 
-# Generated motions
-generated_motions/*
+output/*

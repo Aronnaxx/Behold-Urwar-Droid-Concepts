@@ -9,7 +9,7 @@ from typing import Tuple, Optional, List, Dict
 import tempfile
 from datetime import datetime
 import traceback
-from ..config import duck_config
+from ..config import duck_config, GENERATED_MOTIONS_DIR
 from ..utils.command import run_command
 
 class ReferenceMotionGenerationService:
@@ -48,7 +48,7 @@ class ReferenceMotionGenerationService:
             else:
                 self.logger.warning(f"No duck configuration found for internal name {duck_type}")
             
-            output_dir = self.workspace_root / 'generated_motions' / duck_type
+            output_dir = self.workspace_root / GENERATED_MOTIONS_DIR / duck_type
             output_dir.mkdir(parents=True, exist_ok=True)
             
             run_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -250,7 +250,7 @@ class ReferenceMotionGenerationService:
                     shutil.copy2(pkl_file, dest_pkl)
                     
                     # Update latest symlink
-                    latest_link = self.workspace_root / 'generated_motions' / f'latest_{duck_type}'
+                    latest_link = self.workspace_root / GENERATED_MOTIONS_DIR / f'latest_{duck_type}'
                     self.logger.debug(f"Updating symlink {latest_link} -> {run_output_dir}")
                     if latest_link.exists():
                         latest_link.unlink()
@@ -364,7 +364,7 @@ class ReferenceMotionGenerationService:
                     duck_type = internal_name
             
             # Check motion directory
-            motion_dir = self.workspace_root / 'generated_motions' / duck_type
+            motion_dir = self.workspace_root / GENERATED_MOTIONS_DIR / duck_type
             if not motion_dir.exists():
                 self.logger.debug(f"Motion directory does not exist: {motion_dir}")
                 return []

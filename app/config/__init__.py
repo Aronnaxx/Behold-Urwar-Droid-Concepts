@@ -8,8 +8,8 @@ from .duck_config import DuckConfig, duck_config
 # Base paths and default configurations
 ROOT_DIR = Path(__file__).parent.parent.parent
 OUTPUT_DIR = ROOT_DIR / 'output'
-TRAINED_MODELS_DIR = ROOT_DIR / 'trained_models'
-GENERATED_MOTIONS_DIR = ROOT_DIR / 'generated_motions'
+TRAINED_MODELS_DIR = OUTPUT_DIR / 'trained_models'
+GENERATED_MOTIONS_DIR = OUTPUT_DIR / 'generated_motions'
 
 # Create directories if they don't exist
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

@@ -34,7 +34,7 @@ class OpenDuckPlaygroundService:
 
             # Prepare temp directory
             run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_dir = self.workspace_root / 'trained_models' / duck_type / run_id
+            output_dir = self.workspace_root / TRAINED_MODELS_DIR / duck_type / run_id
             output_dir.mkdir(parents=True, exist_ok=True)
             
             # Build command
@@ -84,7 +84,7 @@ class OpenDuckPlaygroundService:
                 training_output['model_files'].append(str(model_file.name))
             
             # Create latest symlink
-            latest_link = self.workspace_root / 'trained_models' / duck_type / 'latest'
+            latest_link = self.workspace_root / TRAINED_MODELS_DIR / duck_type / 'latest'
             if latest_link.exists():
                 latest_link.unlink()
             latest_link.symlink_to(output_dir, target_is_directory=True)
