@@ -9,14 +9,24 @@ from typing import Tuple, Optional, List, Dict
 import tempfile
 from datetime import datetime
 import traceback
-from ..config import duck_config
+from ..config import duck_config, GENERATED_MOTIONS_DIR
 from ..utils.command import run_command
 
 class ReferenceMotionGenerationService:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, workspace_root: Path):
+        if cls._instance is None:
+            cls._instance = super(ReferenceMotionGenerationService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, workspace_root: Path):
-        self.workspace_root = workspace_root
-        self.submodule_dir = workspace_root / 'submodules/open_duck_reference_motion_generator'
-        self.logger = logging.getLogger(__name__)
+        if not self._initialized:
+            self.workspace_root = workspace_root
+            self.submodule_dir = workspace_root / 'submodules/open_duck_reference_motion_generator'
+            self.logger = logging.getLogger(__name__)
+            self._initialized = True
         
     def generate_motion(self, 
                        duck_type: str, 
@@ -41,14 +51,18 @@ class ReferenceMotionGenerationService:
             self.logger.info("---------------------------------------")
             
             # Get duck information using the internal name
-            duck_info = duck_config.get_config_by_internal_name(duck_type)
-            if duck_info:
-                self.logger.info(f"Found duck configuration for internal name {duck_type}")
-                self.logger.debug(f"Duck Type: {duck_info['duck_type']}, Variant: {duck_info['variant']}")
-            else:
-                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+            duck_info = duck_config.find_by_internal_name(duck_type)
+            if not duck_info:
+                self.logger.error(f"No duck info found for internal name: {duck_type}")
+                return False, f"No duck info found for internal name: {duck_type}", None
+                
+            base_duck_type = duck_info['duck_type']
+            variant_id = duck_info['variant']  # This will be 'v1', 'v2', etc.
+            self.logger.debug(f"Base duck type: {base_duck_type}, Variant: {variant_id}")
             
-            output_dir = self.workspace_root / 'generated_motions' / duck_type
+            # Base directory for the duck type - using variant ID instead of internal name
+            output_dir = self.workspace_root / GENERATED_MOTIONS_DIR / base_duck_type / variant_id
+            self.logger.debug(f"Using output directory: {output_dir}")
             output_dir.mkdir(parents=True, exist_ok=True)
             
             run_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -249,8 +263,8 @@ class ReferenceMotionGenerationService:
                     self.logger.debug(f"Copying {pkl_file} to {dest_pkl}")
                     shutil.copy2(pkl_file, dest_pkl)
                     
-                    # Update latest symlink
-                    latest_link = self.workspace_root / 'generated_motions' / f'latest_{duck_type}'
+                    # Update latest symlink - using variant-specific path
+                    latest_link = output_dir / f'latest_{variant_id}'
                     self.logger.debug(f"Updating symlink {latest_link} -> {run_output_dir}")
                     if latest_link.exists():
                         latest_link.unlink()
@@ -258,12 +272,7 @@ class ReferenceMotionGenerationService:
                     
                     # Copy to playground if needed
                     try:
-                        # If we have duck info, use the original duck type for the playground path
-                        playground_duck_type = duck_type
-                        if duck_info:
-                            playground_duck_type = duck_info['duck_type']
-                            
-                        playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / playground_duck_type / 'data' / pkl_file.name
+                        playground_pkl_path = self.workspace_root / 'submodules/open_duck_playground/playground' / base_duck_type / 'data' / pkl_file.name
                         playground_pkl_path.parent.mkdir(parents=True, exist_ok=True)
                         self.logger.debug(f"Copying {pkl_file} to playground: {playground_pkl_path}")
                         shutil.copy2(pkl_file, playground_pkl_path)
@@ -308,72 +317,66 @@ class ReferenceMotionGenerationService:
                 'error': str(e),
                 'traceback': traceback.format_exc()
             }
-
-    def fit_polynomials(self, motion_files: List[str]) -> Tuple[bool, str, Optional[str]]:
-        """Fit polynomials to reference motion data."""
+        
+    def gait_playground(self, 
+                       duck_type: str, 
+                       variant: str = None,
+                       **params) -> Tuple[bool, str, Optional[Dict]]:
+        """Gait playground for reference motions for the duck."""
         try:
-            cmd = ['uv', 'run', '--active', 'scripts/fit_poly.py', '--ref_motion'] + motion_files
-            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
+            self.logger.info(f"Starting gait playground for {duck_type} (variant: {variant})")
+            self.logger.debug(f"Parameters received: {params}")
             
-            if not success:
-                return False, "Polynomial fitting failed", stderr
-                
-            return True, "Polynomial fitting completed successfully", stdout
+            # Add more detailed parameter logging
+            self.logger.info("----- Gait Playground Parameters -----")
+            self.logger.info(f"Duck Type: {duck_type}")
+            self.logger.info(f"Variant: {variant}")
             
+            # Log all parameters with their types
+            for key, value in params.items():
+                self.logger.info(f"Parameter: {key} = {value} (type: {type(value).__name__})")
+            
+            self.logger.info("---------------------------------------")
+            
+            # Get duck information using the internal name
+            duck_info = duck_config.get_config_by_internal_name(duck_type)
+            if duck_info:
+                self.logger.info(f"Found duck configuration for internal name {duck_type}")
+                self.logger.debug(f"Duck Type: {duck_info['duck_type']}, Variant: {duck_info['variant']}")
+            else:
+                self.logger.warning(f"No duck configuration found for internal name {duck_type}")
+
+            cmd = ['uv', 'run', '--active', 'open_duck_reference_motion_generator/gait_playground.py']
+                    
+            # Use the internal duck_type name which is expected by the script
+            cmd.extend(['--duck', duck_type])
+            self.logger.info(f"Using duck type '{duck_type}' for auto_waddle.py script")
+
         except Exception as e:
-            return False, f"Error fitting polynomials: {str(e)}", None
-
-    def replay_motion(self, motion_file: str) -> Tuple[bool, str, Optional[str]]:
-        """Replay a reference motion."""
-        try:
-            cmd = ['uv', 'run', '--active', 'scripts/replay_motion.py', '--motion_file', motion_file]
-            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
-            
-            if not success:
-                return False, "Motion replay failed", stderr
-                
-            return True, "Motion replay started successfully", stdout
-            
-        except Exception as e:
-            return False, f"Error replaying motion: {str(e)}", None
-
-    def plot_polynomials(self, pkl_file: str, output_dir: str) -> Tuple[bool, str, Optional[Dict]]:
-        """Plot polynomial coefficients."""
-        try:
-            cmd = ['uv', 'run', '--active', 'scripts/plot_polynomials.py', '--pkl_file', pkl_file, '--output_dir', output_dir]
-            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
-            
-            if not success:
-                return False, "Polynomial plotting failed", None
-                
-            # Get list of generated plot files
-            plot_files = []
-            output_path = Path(output_dir)
-            for plot_file in output_path.glob('*.png'):
-                plot_files.append(str(plot_file))
-                
-            return True, "Polynomial plots generated successfully", {
-                'plots': plot_files,
-                'output': stdout
+            self.logger.error(f"Unexpected error in motion generation: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return False, f"Motion generation failed: {str(e)}", {
+                'error': str(e),
+                'traceback': traceback.format_exc()
             }
-            
-        except Exception as e:
-            return False, f"Error plotting polynomials: {str(e)}", None
-
+        
     def list_motion_files(self, duck_type: str, variant: str = None) -> List[str]:
         """List available motion files for a specific duck type."""
         try:
             self.logger.debug(f"Listing motion files for {duck_type} (variant: {variant})")
             
-            # If we have a variant, look up the internal name
-            internal_name = None
-            if variant:
-                internal_name = duck_config.get_internal_name(duck_type, variant)
-                if internal_name:
-                    duck_type = internal_name
+            # Get the base duck type and variant from the internal name
+            duck_info = duck_config.find_by_internal_name(duck_type)
+            if not duck_info:
+                self.logger.warning(f"No duck info found for internal name: {duck_type}")
+                return []
+                
+            base_duck_type = duck_info['duck_type']
+            variant_id = duck_info['variant']  # This will be 'v1', 'v2', etc.
+            self.logger.debug(f"Base duck type: {base_duck_type}, Variant: {variant_id}")
             
-            # Check motion directory
-            motion_dir = self.workspace_root / 'generated_motions' / duck_type
+            # Check motion directory using variant ID
+            motion_dir = self.workspace_root / GENERATED_MOTIONS_DIR / base_duck_type / variant_id
             if not motion_dir.exists():
                 self.logger.debug(f"Motion directory does not exist: {motion_dir}")
                 return []

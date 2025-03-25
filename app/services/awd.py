@@ -6,14 +6,24 @@ import logging
 from typing import Tuple, Optional, List, Dict
 from datetime import datetime
 import traceback
-from ..config import duck_config
+from ..config import duck_config, TRAINED_MODELS_DIR
 from ..utils.command import run_command
 
 class AWDService:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, workspace_root: Path):
+        if cls._instance is None:
+            cls._instance = super(AWDService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, workspace_root: Path):
-        self.workspace_root = workspace_root
-        self.submodule_dir = workspace_root / 'submodules/awd'
-        self.logger = logging.getLogger(__name__)
+        if not self._initialized:
+            self.workspace_root = workspace_root
+            self.submodule_dir = workspace_root / 'submodules/awd'
+            self.logger = logging.getLogger(__name__)
+            self._initialized = True
         
     def train_model(self, duck_type: str, num_envs: int = 2048, motion_file: str = None) -> Tuple[bool, str, Optional[Dict]]:
         """Train a model using Active Whole-Body Control for Humanoids (AWD)."""
@@ -31,7 +41,7 @@ class AWDService:
 
             # Prepare output directory
             run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_dir = self.workspace_root / 'trained_models' / duck_type / f"awd_{run_id}"
+            output_dir = self.workspace_root / TRAINED_MODELS_DIR / duck_type / f"awd_{run_id}"
             output_dir.mkdir(parents=True, exist_ok=True)
             
             # Build command
@@ -81,7 +91,7 @@ class AWDService:
                 training_output['model_files'].append(str(model_file.name))
             
             # Create latest symlink
-            latest_link = self.workspace_root / 'trained_models' / duck_type / 'latest_awd'
+            latest_link = self.workspace_root / TRAINED_MODELS_DIR / duck_type / 'latest_awd'
             if latest_link.exists():
                 latest_link.unlink()
             latest_link.symlink_to(output_dir, target_is_directory=True)

@@ -8,18 +8,18 @@ from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
 import logging
 import os
+from typing import Optional
 
 class DuckBlueprint(Blueprint):
     """Blueprint for handling duck-related routes and views."""
     
     def __init__(self, name, import_name, **kwargs):
         super().__init__(name, import_name, **kwargs)
-        self.workspace_root = Path(__file__).parent.parent.parent
-        
-        # Initialize logger
-        self.logger = logging.getLogger(f"{__name__}.{name}")
+        self.name = name
+        self.logger = logging.getLogger(__name__)
         
         # Initialize services
+        self.workspace_root = Path(__file__).parent.parent.parent
         self.playground_service = OpenDuckPlaygroundService(self.workspace_root)
         self.awd_service = AWDService(self.workspace_root)
         self.deployment_service = DeploymentService(self.workspace_root)
@@ -196,22 +196,32 @@ class DuckBlueprint(Blueprint):
             duck_type = self.name
             variant_id = request.args.get('variant')
             
+            # Add detailed logging
+            self.logger.info(f"Rendering playground page for {duck_type} (variant: {variant_id})")
+            self.logger.debug(f"Request args: {request.args}")
+            
             # Get duck type config and validate
             duck_type_config = duck_config.get_duck_type(duck_type)
             if not duck_type_config:
+                self.logger.warning(f"Invalid duck type requested: {duck_type}")
                 return redirect(url_for('main.index'))
             
             # Get variant info
             variants = duck_type_config.get('variants', {})
             if not variants:
+                self.logger.warning(f"No variants found for duck type: {duck_type}")
                 return redirect(url_for('main.index'))
             
             if not variant_id:
                 variant_id = list(variants.keys())[0]
+                self.logger.info(f"No variant specified, using default: {variant_id}")
             
             variant = variants.get(variant_id)
             if not variant:
+                self.logger.warning(f"Invalid variant requested: {variant_id} for duck type: {duck_type}")
                 return redirect(url_for('main.index'))
+            
+            self.logger.info(f"Using variant: {variant_id} ({variant.get('name', variant_id)})")
             
             # Create duck data object
             duck_data = {
@@ -227,11 +237,81 @@ class DuckBlueprint(Blueprint):
             
             # Get trained models for this variant
             trained_models = self.get_trained_models(duck_type, variant_id)
+            self.logger.info(f"Found {len(trained_models)} trained models for variant {variant_id}")
             
             return render_template('duck_droids/playground.html',
                                 duck=duck_data,
                                 trained_models=trained_models,
                                 variants=variants)
+
+        @self.route('/playground/launch', methods=['GET', 'POST'])
+        def launch_playground():
+            """Launch the playground with the specified parameters."""
+            try:
+                self.logger.info("Received playground launch request")
+                
+                # Get parameters from either GET or POST request
+                if request.method == 'GET':
+                    data = request.args.to_dict()
+                else:
+                    data = request.get_json() or {}
+                
+                self.logger.info("----- Playground Launch Parameters -----")
+                self.logger.info(f"Request method: {request.method}")
+                self.logger.info(f"Request data: {data}")
+                
+                model = data.get('model', 'latest')
+                env = data.get('env', 'joystick')
+                task = data.get('task', 'flat_terrain')
+                speed = int(data.get('speed', 50))
+                variant_id = data.get('variant')
+                
+                self.logger.info(f"Model: {model}")
+                self.logger.info(f"Environment: {env}")
+                self.logger.info(f"Task: {task}")
+                self.logger.info(f"Speed: {speed}")
+                self.logger.info(f"Variant ID: {variant_id}")
+                
+                # Get the internal duck name
+                duck_type = self.get_internal_duck_name(self.name, variant_id)
+                self.logger.info(f"Using internal duck name: {duck_type}")
+                
+                if not duck_type:
+                    error_msg = f"Could not determine internal duck name for {self.name}/{variant_id}"
+                    self.logger.error(error_msg)
+                    return jsonify({'error': error_msg}), 400
+                
+                # First, let's check what models are available
+                available_models = self.playground_service.find_available_models(duck_type)
+                self.logger.info(f"Found {len(available_models)} available models")
+                for model_info in available_models:
+                    self.logger.info(f"Model: {model_info}")
+                
+                # Launch the playground
+                success, message, details = self.playground_service.launch_playground(
+                    duck_type=duck_type,
+                    model=model,
+                    env=env,
+                    task=task,
+                    speed=speed
+                )
+                
+                if not success:
+                    self.logger.error(f"Failed to launch playground: {message}")
+                    return jsonify({'error': message}), 400
+                
+                self.logger.info("Successfully launched playground")
+                return jsonify({
+                    'message': message,
+                    'details': details
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Error launching playground: {str(e)}")
+                self.logger.error(traceback.format_exc())
+                return jsonify({
+                    'error': f"Error launching playground: {str(e)}"
+                }), 500
 
         @self.route('/training')
         def training():
@@ -249,8 +329,9 @@ class DuckBlueprint(Blueprint):
             if not variants:
                 return redirect(url_for('main.index'))
             
+            # If no variant specified, try to get it from the session or default to first variant
             if not variant_id:
-                variant_id = list(variants.keys())[0]
+                variant_id = request.args.get('variant', list(variants.keys())[0])
             
             variant = variants.get(variant_id)
             if not variant:
@@ -953,22 +1034,25 @@ class DuckBlueprint(Blueprint):
                     'error': f'Error downloading motion file: {str(e)}'
                 }), 500
 
-    def get_internal_duck_name(self, duck_type, variant=None):
-        """Get the internal duck name based on the duck type and variant."""
-        # Use the duck_config to get the internal name
-        internal_name = duck_config.get_internal_name(duck_type, variant)
+    def get_internal_duck_name(self, duck_type: str, variant: str = None) -> Optional[str]:
+        """Get the internal name for a duck type and variant."""
+        # If variant is provided, use it to get the internal name
+        if variant:
+            internal_name = duck_config.get_internal_name(duck_type, variant)
+            if internal_name:
+                self.logger.debug(f"Using internal name {internal_name} for variant {variant}")
+                return internal_name
         
-        # If no internal name found and variant is None, try to get the first variant
-        if not internal_name and variant is None:
-            duck_type_config = duck_config.get_duck_type(duck_type)
-            if duck_type_config and 'variants' in duck_type_config:
-                # Get first variant ID
-                first_variant_id = next(iter(duck_type_config['variants'].keys()), None)
-                if first_variant_id:
-                    internal_name = duck_config.get_internal_name(duck_type, first_variant_id)
-        
-        self.logger.debug(f"Getting internal duck name for {duck_type}/{variant}: {internal_name}")
-        return internal_name
+        # If no variant specified or variant not found, use the first variant's internal name as default
+        duck_type_config = duck_config.get_duck_type(duck_type)
+        if duck_type_config and 'variants' in duck_type_config:
+            first_variant_id = next(iter(duck_type_config['variants'].keys()))
+            internal_name = duck_config.get_internal_name(duck_type, first_variant_id)
+            self.logger.debug(f"No variant specified, using first variant {first_variant_id} with internal name {internal_name}")
+            return internal_name
+            
+        self.logger.warning(f"Could not determine internal name for {duck_type}/{variant}")
+        return None
 
 # Create blueprint instance
 duck = DuckBlueprint('duck', __name__) 

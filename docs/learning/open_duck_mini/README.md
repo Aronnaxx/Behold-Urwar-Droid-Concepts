@@ -1,3 +1,0 @@
-# OpenDuck Mini
-
-todo

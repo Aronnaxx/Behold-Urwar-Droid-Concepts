@@ -9,11 +9,21 @@ import traceback
 from ..utils.command import run_command
 
 class DeploymentService:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, workspace_root: Path):
+        if cls._instance is None:
+            cls._instance = super(DeploymentService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, workspace_root: Path):
-        self.workspace_root = workspace_root
-        self.serial_connection = None
-        self.ssh_connection = None
-        self.logger = logging.getLogger(__name__)
+        if not self._initialized:
+            self.workspace_root = workspace_root
+            self.serial_connection = None
+            self.ssh_connection = None
+            self.logger = logging.getLogger(__name__)
+            self._initialized = True
         
     def connect_serial(self, port: str, baudrate: int = 115200) -> Tuple[bool, str]:
         """Connect to a device via serial port."""

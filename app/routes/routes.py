@@ -1,10 +1,15 @@
-from flask import Blueprint, request, jsonify, current_app, url_for
+from flask import Blueprint, request, jsonify, current_app, url_for, render_template
 from pathlib import Path
 from ..services.open_duck_mini_playground import OpenDuckPlaygroundService
 from ..services.awd import AWDService
 from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
-from ..config import duck_config
+from ..config import duck_config, TRAINED_MODELS_DIR
+import os
+import logging
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 class DuckRoutes:
     """Class to handle all duck-related routes."""
@@ -24,10 +29,13 @@ class DuckRoutes:
         
     def get_internal_duck_type(self, duck_type, variant=None):
         """Get the internal duck type name based on the URL path and variant."""
+        # If variant is provided, use it to get the internal name
         if variant:
-            return duck_config.get_internal_name(duck_type, variant)
+            internal_name = duck_config.get_internal_name(duck_type, variant)
+            if internal_name:
+                return internal_name
         
-        # If no variant specified, use the first variant's internal name as default
+        # If no variant specified or variant not found, use the first variant's internal name as default
         duck_type_config = duck_config.get_duck_type(duck_type)
         if duck_type_config and 'variants' in duck_type_config:
             first_variant_id = next(iter(duck_type_config['variants'].keys()))
@@ -82,6 +90,8 @@ class DuckRoutes:
                 num_envs = data.get('num_envs', 1)
                 motion_file = data.get('motion_file')
                 framework = data.get('framework', 'playground')  # or 'awd'
+                env = data.get('env', 'joystick')
+                task = data.get('task', 'flat_terrain')
                 
                 internal_duck_type = self.get_internal_duck_type(duck_type, variant)
                 if not internal_duck_type:
@@ -91,7 +101,9 @@ class DuckRoutes:
                     success, message, output = self.playground_service.train_model(
                         duck_type=internal_duck_type,
                         num_envs=num_envs,
-                        motion_file=motion_file
+                        motion_file=motion_file,
+                        env=env,
+                        task=task
                     )
                 else:
                     success, message, output = self.awd_service.train_model(
@@ -109,6 +121,139 @@ class DuckRoutes:
             except Exception as e:
                 return jsonify({'success': False, 'error': str(e)}), 500
                 
+        # Get available environments and tasks
+        @self.app.route('/api/playground/envs', methods=['GET'])
+        def get_playground_envs():
+            try:
+                envs = self.playground_service.get_available_envs()
+                return jsonify({
+                    'success': True,
+                    'environments': envs
+                })
+            except Exception as e:
+                return jsonify({'success': False, 'error': str(e)}), 500
+
+        # Playground routes
+        @self.app.route('/<duck_type>/playground')
+        def playground(duck_type):
+            """Render the playground page for a specific duck type."""
+            try:
+                duck_type_config = duck_config.get_duck_type(duck_type)
+                if not duck_type_config:
+                    return render_template('error.html', message=f"Duck type {duck_type} not found"), 404
+                
+                # Get available models from trained models directory
+                model_dir = Path(TRAINED_MODELS_DIR) / duck_type
+                available_models = []
+                
+                if model_dir.exists():
+                    # Add latest and best options
+                    available_models.append({'id': 'latest', 'name': 'Latest Model'})
+                    available_models.append({'id': 'best', 'name': 'Best Model'})
+                    
+                    # Add all .onnx files
+                    for model_file in model_dir.glob('*.onnx'):
+                        available_models.append({
+                            'id': model_file.name,
+                            'name': model_file.stem
+                        })
+                    
+                return render_template('duck_droids/playground.html', 
+                                    duck_type=duck_type,
+                                    available_models=available_models)
+            except Exception as e:
+                logger.error(f"Error rendering playground for {duck_type}: {str(e)}")
+                return render_template('error.html', message="Error loading playground"), 500
+
+        @self.app.route('/<duck_type>/playground/launch')
+        def launch_playground(duck_type):
+            """Launch the Mujoco playground for a specific model."""
+            try:
+                # Get variant from query parameters
+                variant = request.args.get('variant')
+                
+                # Get the internal name using duck_config
+                internal_name = self.get_internal_duck_type(duck_type, variant)
+                if not internal_name:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Invalid duck type or variant: {duck_type}/{variant}'
+                    }), 400
+                
+                model = request.args.get('model', 'latest')
+                env = request.args.get('env', 'joystick')
+                task = request.args.get('task', 'flat_terrain')
+                speed = int(request.args.get('speed', 50))  # Changed to int and default 50
+                
+                # First, let's check what models are available
+                available_models = self.playground_service.find_available_models(internal_name)
+                logger.info(f"Found {len(available_models)} available models")
+                for model_info in available_models:
+                    logger.info(f"Model: {model_info}")
+                
+                # Launch the playground
+                success, message, data = self.playground_service.launch_playground(
+                    duck_type=internal_name,
+                    model=model,
+                    env=env,
+                    task=task,
+                    speed=speed
+                )
+                
+                return jsonify({
+                    'success': success,
+                    'message': message,
+                    'data': data
+                })
+            except Exception as e:
+                logger.error(f"Error launching playground for {duck_type}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'message': f"Error launching playground: {str(e)}"
+                }), 500
+
+        @self.app.route('/<duck_type>/playground/train')
+        def train_model(duck_type):
+            """Start training a model using the playground."""
+            try:
+                # Get variant from query parameters
+                variant = request.args.get('variant')
+                
+                # Get the internal name using duck_config
+                internal_name = self.get_internal_duck_type(duck_type, variant)
+                if not internal_name:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Invalid duck type or variant: {duck_type}/{variant}'
+                    }), 400
+                
+                # Get training parameters
+                env = request.args.get('env', 'joystick')
+                task = request.args.get('task', 'flat_terrain')
+                num_timesteps = int(request.args.get('num_timesteps', 150000000))
+                restore_checkpoint_path = request.args.get('restore_checkpoint_path')
+                
+                # Start training
+                success, message, data = self.playground_service.train_model(
+                    duck_type=internal_name,
+                    env=env,
+                    task=task,
+                    num_timesteps=num_timesteps,
+                    restore_checkpoint_path=restore_checkpoint_path
+                )
+                
+                return jsonify({
+                    'success': success,
+                    'message': message,
+                    'data': data
+                })
+            except Exception as e:
+                logger.error(f"Error starting training for {duck_type}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'message': f"Error starting training: {str(e)}"
+                }), 500
+
         # Motion generation routes
         @self.app.route('/<duck_type>/generate_motion', methods=['POST'])
         def generate_motion(duck_type):
