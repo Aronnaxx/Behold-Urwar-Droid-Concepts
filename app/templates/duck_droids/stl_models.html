@@ -3,7 +3,7 @@
 {% block title %}{{ duck.name }} - STL Models{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -13,53 +13,118 @@
         </ol>
     </nav>
 
+    <!-- Quick Links and Tips Bar -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h4">Quick Links</h2>
+                    <div class="btn-group">
+                        <a href="{{ url_for(duck.type + '.bom') }}" class="btn btn-outline-primary">Bill of Materials</a>
+                        <a href="{{ url_for(duck.type + '.assembly') }}" class="btn btn-outline-primary">Assembly Guide</a>
+                        <a href="{{ url_for(duck.type + '.playground') }}" class="btn btn-outline-primary">Test in Playground</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h4">Printing Tips</h2>
+                    <div class="d-flex flex-wrap gap-3">
+                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Clean build plate</span>
+                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Use brim for adhesion</span>
+                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Keep filament dry</span>
+                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Monitor progress</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
     <div class="row">
-        <!-- Main Content -->
-        <div class="col-md-8">
+        <div class="col-12">
             <h1>STL Models</h1>
             <p class="lead">Download and print the 3D models for your {{ duck.name }} {{ duck.variant.name }}.</p>
 
-            <!-- STL Parts -->
+            {% if not stl_files %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                No STL files found for this duck type. Please check the configuration or contact support.
+            </div>
+            {% else %}
+            <!-- Action Buttons -->
+            <div class="btn-group mb-4">
+                <a href="{{ url_for(duck.type + '.download_stl_bundle', variant=duck.variant.id) }}" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download STL Bundle
+                </a>
+                <button type="button" class="btn btn-secondary" id="convertToGlbBtn">
+                    <i class="fas fa-sync"></i> Convert to GLB
+                </button>
+                <a href="#" class="btn btn-info" id="downloadGcodeBtn">
+                    <i class="fas fa-download"></i> Download G-Code
+                </a>
+            </div>
+
+            <!-- STL Files Grid -->
             <div class="row">
-                {% for part in stl_parts %}
-                <div class="col-md-6 mb-4">
+                {% for stl_file in stl_files %}
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h3 class="card-title">{{ part.name }}</h3>
-                            <div class="model-viewer mb-3" style="height: 200px;">
+                            <h3 class="card-title h5">{{ stl_file.name }}</h3>
+                            
+                            <!-- Model Viewer -->
+                            <div class="model-viewer mb-3" style="height: 250px;">
+                                {% set glb_file = glb_files|selectattr('name', 'equalto', stl_file.name|replace('.stl', '.glb'))|first %}
+                                {% if glb_file %}
                                 <model-viewer
-                                    src="{{ part.model_url }}"
-                                    alt="{{ part.name }}"
+                                    src="{{ url_for('static', filename='models/' + duck.type + '/' + duck.variant.id + '/' + glb_file.name) }}"
+                                    alt="{{ stl_file.name }}"
                                     camera-controls
                                     auto-rotate
-                                    camera-orbit="45deg 55deg 2.5m"
+                                    camera-orbit="45deg 55deg 4m"
                                     shadow-intensity="1"
                                     exposure="1"
                                     environment-image="neutral"
                                     style="width: 100%; height: 100%;"
-                                ></model-viewer>
-                            </div>
-                            <p class="card-text">{{ part.description }}</p>
-                            <ul class="list-unstyled">
-                                <li><strong>Print Time:</strong> {{ part.print_time }}</li>
-                                <li><strong>Material:</strong> {{ part.material }}</li>
-                                <li><strong>Support Needed:</strong> {{ part.support_needed }}</li>
-                            </ul>
-                            <div class="btn-group">
-                                <a href="{{ part.stl_url }}" class="btn btn-primary">
-                                    <i class="fas fa-download"></i> Download STL
-                                </a>
-                                {% if part.gcode_url %}
-                                <a href="{{ part.gcode_url }}" class="btn btn-secondary">
-                                    <i class="fas fa-download"></i> Download G-Code
-                                </a>
+                                    loading="eager"
+                                >
+                                    <div class="progress-bar" slot="progress-bar">
+                                        <div class="update-bar"></div>
+                                    </div>
+                                </model-viewer>
+                                {% else %}
+                                <div class="text-center p-3 bg-light">
+                                    <p class="mb-0">GLB preview not available</p>
+                                    <button class="btn btn-sm btn-outline-primary mt-2 convert-single" 
+                                            data-filename="{{ stl_file.name }}">
+                                        Convert to GLB
+                                    </button>
+                                </div>
                                 {% endif %}
                             </div>
+
+                            <!-- File Info -->
+                            <div class="file-info mb-3">
+                                <small class="text-muted">
+                                    Size: {{ (stl_file.size / 1024)|round(2) }} KB<br>
+                                    Modified: {{ stl_file.modified|datetime }}
+                                </small>
+                            </div>
+
+                            <!-- Download Button -->
+                            <a href="{{ url_for(duck.type + '.download_stl', filename=stl_file.name, variant=duck.variant.id) }}" 
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-download"></i> Download STL
+                            </a>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
+            {% endif %}
 
             <!-- Printing Instructions -->
             <div class="card mt-4">
@@ -67,112 +132,35 @@
                     <h2 class="h4 mb-0">Printing Instructions</h2>
                 </div>
                 <div class="card-body">
-                    <div class="accordion" id="printingAccordion">
-                        <!-- General Guidelines -->
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#generalGuidelines">
-                                    General Guidelines
-                                </button>
-                            </h3>
-                            <div id="generalGuidelines" class="accordion-collapse collapse show" data-bs-parent="#printingAccordion">
-                                <div class="accordion-body">
-                                    <ul>
-                                        <li>Use high-quality PLA or PETG filament</li>
-                                        <li>Ensure your printer is properly calibrated</li>
-                                        <li>Check bed adhesion before starting long prints</li>
-                                        <li>Monitor the first few layers of each print</li>
-                                    </ul>
-                                </div>
-                            </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h3 class="h5">General Guidelines</h3>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check me-2"></i>Use high-quality PLA or PETG filament</li>
+                                <li><i class="fas fa-check me-2"></i>Ensure your printer is properly calibrated</li>
+                                <li><i class="fas fa-check me-2"></i>Check bed adhesion before starting long prints</li>
+                                <li><i class="fas fa-check me-2"></i>Monitor the first few layers of each print</li>
+                            </ul>
                         </div>
-
-                        <!-- Bambu X1 Settings -->
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#bambuSettings">
-                                    Bambu X1 Settings
-                                </button>
-                            </h3>
-                            <div id="bambuSettings" class="accordion-collapse collapse" data-bs-parent="#printingAccordion">
-                                <div class="accordion-body">
-                                    <ul>
-                                        <li>Layer Height: 0.2mm</li>
-                                        <li>Infill: 20%</li>
-                                        <li>Support: Tree (Auto)</li>
-                                        <li>Build Plate: Textured PEI</li>
-                                    </ul>
-                                </div>
-                            </div>
+                        <div class="col-md-4">
+                            <h3 class="h5">Bambu X1 Settings</h3>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-cog me-2"></i>Layer Height: 0.2mm</li>
+                                <li><i class="fas fa-cog me-2"></i>Infill: 20%</li>
+                                <li><i class="fas fa-cog me-2"></i>Support: Tree (Auto)</li>
+                                <li><i class="fas fa-cog me-2"></i>Build Plate: Textured PEI</li>
+                            </ul>
                         </div>
-
-                        <!-- Other Printers -->
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#otherPrinters">
-                                    Other Printers
-                                </button>
-                            </h3>
-                            <div id="otherPrinters" class="accordion-collapse collapse" data-bs-parent="#printingAccordion">
-                                <div class="accordion-body">
-                                    <ul>
-                                        <li>Layer Height: 0.2mm</li>
-                                        <li>Infill: 20%</li>
-                                        <li>Support: Tree or Grid</li>
-                                        <li>Build Plate: Heated bed with adhesive</li>
-                                    </ul>
-                                </div>
-                            </div>
+                        <div class="col-md-4">
+                            <h3 class="h5">Other Printers</h3>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-cog me-2"></i>Layer Height: 0.2mm</li>
+                                <li><i class="fas fa-cog me-2"></i>Infill: 20%</li>
+                                <li><i class="fas fa-cog me-2"></i>Support: Tree or Grid</li>
+                                <li><i class="fas fa-cog me-2"></i>Build Plate: Heated bed with adhesive</li>
+                            </ul>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h2 class="h4 mb-0">Quick Links</h2>
-                </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        <a href="{{ url_for(duck.type + '.bom') }}" class="list-group-item list-group-item-action">
-                            Bill of Materials
-                        </a>
-                        <a href="{{ url_for(duck.type + '.assembly') }}" class="list-group-item list-group-item-action">
-                            Assembly Guide
-                        </a>
-                        <a href="{{ url_for(duck.type + '.playground') }}" class="list-group-item list-group-item-action">
-                            Test in Playground
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="h4 mb-0">Printing Tips</h2>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Clean your build plate before printing
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Use a brim for better adhesion
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Keep your filament dry
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Monitor print progress
-                        </li>
-                    </ul>
                 </div>
             </div>
         </div>
@@ -181,5 +169,73 @@
 
 {% block extra_js %}
 <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Convert to GLB button handler
+    document.getElementById('convertToGlbBtn').addEventListener('click', function() {
+        const button = this;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
+        
+        fetch(`{{ url_for(duck.type + '.convert_stl_to_glb', variant=duck.variant.id) }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to show new GLB files
+                window.location.reload();
+            } else {
+                alert('Error converting files: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-sync"></i> Convert to GLB';
+        });
+    });
+
+    // Individual file conversion buttons
+    document.querySelectorAll('.convert-single').forEach(button => {
+        button.addEventListener('click', function() {
+            const filename = this.dataset.filename;
+            const card = this.closest('.card');
+            const viewer = card.querySelector('.model-viewer');
+            
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
+            
+            fetch(`{{ url_for(duck.type + '.convert_stl_to_glb', variant=duck.variant.id) }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to show new GLB files
+                    window.location.reload();
+                } else {
+                    alert('Error converting file: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error);
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = 'Convert to GLB';
+            });
+        });
+    });
+});
+</script>
 {% endblock %}
 {% endblock %} 
