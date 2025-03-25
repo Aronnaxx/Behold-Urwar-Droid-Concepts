@@ -428,4 +428,37 @@ class DuckRoutes:
                 return jsonify({
                     'success': False,
                     'message': f'Error getting device status: {str(e)}'
-                }) 
+                })
+
+        @self.app.route('/<duck_type>/launch_gait_playground', methods=['POST'])
+        def launch_gait_playground(duck_type):
+            """Launch the gait playground for a specific duck type."""
+            try:
+                # Get variant from query parameters
+                variant = request.args.get('variant')
+                
+                # Get the internal name using duck_config
+                internal_name = self.get_internal_duck_type(duck_type, variant)
+                if not internal_name:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Invalid duck type or variant: {duck_type}/{variant}'
+                    }), 400
+                
+                # Launch the playground
+                success, message, data = self.motion_service.gait_playground(
+                    duck_type=internal_name,
+                    variant=variant
+                )
+                
+                return jsonify({
+                    'success': success,
+                    'message': message,
+                    'data': data
+                })
+            except Exception as e:
+                logger.error(f"Error launching playground for {duck_type}: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'message': f"Error launching playground: {str(e)}"
+                }), 500 

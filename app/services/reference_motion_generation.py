@@ -346,16 +346,43 @@ class ReferenceMotionGenerationService:
             else:
                 self.logger.warning(f"No duck configuration found for internal name {duck_type}")
 
+            # Build command
             cmd = ['uv', 'run', '--active', 'open_duck_reference_motion_generator/gait_playground.py']
                     
             # Use the internal duck_type name which is expected by the script
             cmd.extend(['--duck', duck_type])
-            self.logger.info(f"Using duck type '{duck_type}' for auto_waddle.py script")
+            self.logger.info(f"Using duck type '{duck_type}' for gait_playground.py script")
+            
+            # Add any additional parameters
+            for key, value in params.items():
+                if value is not None:
+                    cmd.extend([f'--{key}', str(value)])
+            
+            # Run the command
+            self.logger.info(f"Executing command: {' '.join(cmd)}")
+            self.logger.debug(f"Command as list: {cmd}")
+            self.logger.debug(f"Working directory: {self.submodule_dir}")
+            
+            stdout, stderr, success = run_command(cmd, str(self.submodule_dir), logger=self.logger)
+            
+            if not success:
+                self.logger.error("Gait playground command failed")
+                return False, "Gait playground command failed", {
+                    'command': ' '.join(cmd),
+                    'stdout': stdout,
+                    'stderr': stderr
+                }
+            
+            self.logger.info("Gait playground launched successfully")
+            return True, "Gait playground launched successfully", {
+                'stdout': stdout,
+                'stderr': stderr
+            }
 
         except Exception as e:
-            self.logger.error(f"Unexpected error in motion generation: {str(e)}")
+            self.logger.error(f"Unexpected error in gait playground: {str(e)}")
             self.logger.error(traceback.format_exc())
-            return False, f"Motion generation failed: {str(e)}", {
+            return False, f"Gait playground failed: {str(e)}", {
                 'error': str(e),
                 'traceback': traceback.format_exc()
             }
