@@ -1,6 +1,32 @@
 # Behold-Urwar-Droid-Concepts
 
-A web interface for training and testing duck droid models using reinforcement learning.
+A modern web interface for training and testing duck droid models using reinforcement learning, built with Flask and UV.
+
+## Architecture
+
+```mermaid
+graph TD
+    A[Web Interface] --> B[Flask Application]
+    B --> C[Routes]
+    B --> D[Services]
+    B --> E[Utils]
+    
+    C --> F[Training Routes]
+    C --> G[Testing Routes]
+    C --> H[Model Routes]
+    
+    D --> I[Training Service]
+    D --> J[Model Service]
+    D --> K[Playground Service]
+    
+    E --> L[Config Utils]
+    E --> M[Model Utils]
+    E --> N[Visualization Utils]
+    
+    I --> O[Open Duck Playground]
+    J --> P[ONNX Runtime]
+    K --> Q[Reference Motion Generator]
+```
 
 ## Features
 
@@ -12,37 +38,42 @@ A web interface for training and testing duck droid models using reinforcement l
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.11 or higher
 - Git
 - CUDA-capable GPU (recommended for training)
+- UV package manager
 
-## Quick Start
+## Installation
 
-1. Clone the repository:
+### 1. Install UV
+
+First, install UV (a fast Python package installer and resolver):
+
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 2. Clone and Setup
+
+```bash
+# Clone the repository
 git clone https://github.com/yourusername/Behold-Urwar-Droid-Concepts.git
 cd Behold-Urwar-Droid-Concepts
+
+# Initialize and update submodules
+git submodule update --init --recursive
 ```
 
-2. Run the setup script:
-```bash
-chmod +x setup.sh
-./setup.sh
-```
+## Running the Application
 
-3. Activate the virtual environment:
-```bash
-source .venv/bin/activate
-```
-
-4. Start the web interface:
+1. Start the web interface:
 ```bash
 uv run app.py
 ```
 
-5. Open your browser and navigate to:
+2. Open your browser and navigate to:
 ```
-http://localhost:5000
+http://localhost:5002
 ```
 
 ## Project Structure
@@ -50,38 +81,24 @@ http://localhost:5000
 ```
 .
 ├── app/                    # Core application code
-│   ├── routes/            # Flask routes
-│   ├── services/          # Business logic
-│   ├── static/           # Static assets
-│   └── templates/        # HTML templates
-├── docs/                  # Documentation
-├── generated_motions/     # Storage for generated motions
-├── static/               # Global static assets
-├── submodules/           # Git submodules
-│   ├── open_duck_mini/   # Duck model definitions
+│   ├── config/           # Configuration files
+│   ├── routes/           # Flask routes
+│   ├── services/         # Business logic
+│   ├── static/          # Static assets
+│   ├── templates/       # HTML templates
+│   └── utils/           # Utility functions
+├── submodules/          # Git submodules
+│   ├── open_duck_mini/  # Duck model definitions
 │   ├── open_duck_playground/  # Training environment
 │   └── open_duck_reference_motion_generator/  # Motion generation
-├── templates/            # Global templates
-├── trained_models/       # Storage for trained models
-├── .env                  # Environment configuration
-├── app.py               # Main Flask application
-├── pyproject.toml       # Python package configuration
-└── setup.sh            # Setup automation script
+├── output/              # Generated outputs
+├── .env                # Environment configuration
+├── app.py             # Main Flask application
+├── pyproject.toml     # Python package configuration
+└── uv.lock           # UV dependency lock file
 ```
 
 ## Development
-
-### Installing Development Dependencies
-
-```bash
-uv pip install -e ".[dev]"
-```
-
-### Running Tests
-
-```bash
-pytest
-```
 
 ### Code Style
 
@@ -94,6 +111,12 @@ Run the formatters:
 ```bash
 black .
 isort .
+```
+
+### Running Tests
+
+```bash
+pytest
 ```
 
 ## License
