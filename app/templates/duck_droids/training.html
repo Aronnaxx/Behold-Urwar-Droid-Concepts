@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ duck.name }} - Training{% endblock %}
+{% block title %}{{ duck.name }} - Reference Motion Generation{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -205,18 +205,52 @@
     .file-status.missing {
         color: var(--bs-danger);
     }
+    .playground-container {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 50%;
+        height: 100vh;
+        background-color: var(--bs-gray-900);
+        z-index: 1000;
+        display: none;
+    }
+    .playground-container.active {
+        display: block;
+    }
+    .playground-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    .playground-toggle {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 1001;
+        display: none;
+    }
+    .playground-toggle.active {
+        display: block;
+    }
+    .main-content {
+        transition: margin-right 0.3s ease;
+    }
+    .main-content.playground-active {
+        margin-right: 50%;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for(duck.type + '.duck_page') }}">{{ duck.name }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Training</li>
+                    <li class="breadcrumb-item active" aria-current="page">Reference Motion Generation</li>
                 </ol>
             </nav>
         </div>
@@ -453,78 +487,20 @@
                     <div class="log-output"></div>
                 </div>
             </div>
-
-            <div class="workflow-step" id="step2">
-                <h3><span class="step-number">2</span> Train Policy</h3>
-                <div class="step-status pending">Pending</div>
-                
-                <form id="training-config-form">
-                    <div class="form-group">
-                        <label for="model-type" class="form-label">Model Type</label>
-                        <select class="form-control" id="model-type" name="model_type">
-                            <option value="ppo">PPO</option>
-                            <option value="sac">SAC</option>
-                            <option value="td3">TD3</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="num-steps" class="form-label">Number of Steps</label>
-                        <input type="number" class="form-control" id="num-steps" name="num_steps" value="1000000">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="learning-rate" class="form-label">Learning Rate</label>
-                        <input type="number" class="form-control" id="learning-rate" name="learning_rate" value="0.0003" step="0.0001">
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary">Start Training</button>
-                    <div class="file-status" id="training-file-status">
-                        <i class="fas fa-spinner fa-spin"></i> Checking training files...
-                    </div>
-                </form>
-                
-                <div class="mt-4">
-                    <h3>Training Progress</h3>
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <div class="log-output mt-3"></div>
-                </div>
-            </div>
-
-            <div class="workflow-step" id="step3">
-                <h3><span class="step-number">3</span> Test in Playground</h3>
-                <div class="step-status pending">Pending</div>
-                
-                <form id="testing-config-form">
-                    <div class="form-group">
-                        <label for="test-episodes" class="form-label">Number of Episodes</label>
-                        <input type="number" class="form-control" id="test-episodes" name="test_episodes" value="10">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="test-model" class="form-label">Model to Test</label>
-                        <select class="form-control" id="test-model" name="test_model">
-                            <option value="latest">Latest Model</option>
-                            <option value="best">Best Model</option>
-                        </select>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary">Start Testing</button>
-                    <div class="file-status" id="testing-file-status">
-                        <i class="fas fa-spinner fa-spin"></i> Checking testing files...
-                    </div>
-                </form>
-                
-                <div class="mt-4">
-                    <h3>Test Results</h3>
-                    <div class="results-container"></div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
+
+<!-- Playground Container -->
+<div class="playground-container" id="playground-container">
+    <iframe class="playground-iframe" id="playground-iframe" src="http://127.0.0.1:5000/"></iframe>
+</div>
+
+<!-- Playground Toggle Button -->
+<button class="btn btn-primary playground-toggle" id="playground-toggle">
+    <i class="fas fa-times"></i> Close Playground
+</button>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -535,16 +511,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // This script handles UI elements not managed by reference_motions.js
     console.log("DEBUG-HTML: Duck page initialization started");
     
-    const trainingForm = document.getElementById('training-config-form');
-    const testingForm = document.getElementById('testing-config-form');
     const numMotionsGroup = document.getElementById('num-motions-group');
     const generationType = document.getElementById('generation-type');
     const motionFileStatus = document.getElementById('motion-file-status');
-    const trainingFileStatus = document.getElementById('training-file-status');
-    const testingFileStatus = document.getElementById('testing-file-status');
     const modeSelect = document.getElementById('mode-select');
     const autoModeOptions = document.getElementById('auto-mode-options');
     const advancedOptions = document.getElementById('advanced-options');
+    const playgroundContainer = document.getElementById('playground-container');
+    const playgroundToggle = document.getElementById('playground-toggle');
+    const mainContent = document.querySelector('.container-fluid');
     
     console.log("DEBUG-HTML: UI elements initialized");
     
@@ -579,6 +554,56 @@ document.addEventListener('DOMContentLoaded', function() {
     autoModeOptions.style.display = 'block';
     advancedOptions.style.display = 'none';
     numMotionsGroup.style.display = generationType.value === 'random' ? 'block' : 'none';
+
+    // Playground toggle functionality
+    document.getElementById('launch-playground').addEventListener('click', async function() {
+        const button = this;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Launching...';
+        button.disabled = true;
+
+        try {
+            // Get variant from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const variant = urlParams.get('variant');
+
+            // Launch the playground
+            const response = await fetch(`/{{ duck.type }}/launch_gait_playground?variant=${variant}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            console.log('DEBUG-HTML: Playground launch response:', data);
+            
+            if (data.success) {
+                // Update iframe source to point to the viewer
+                document.getElementById('playground-iframe').src = 'http://127.0.0.1:7000/static/';
+                
+                // Show the playground container
+                document.querySelector('.playground-container').style.display = 'block';
+                document.querySelector('.main-content').classList.add('playground-active');
+            } else {
+                console.error('Failed to launch playground:', data.message);
+                alert('Failed to launch playground: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error launching playground:', error);
+            alert('Error launching playground: ' + error.message);
+        } finally {
+            // Reset button state
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    });
+
+    playgroundToggle.addEventListener('click', function() {
+        playgroundContainer.classList.remove('active');
+        playgroundToggle.classList.remove('active');
+        mainContent.classList.remove('playground-active');
+    });
 
     async function checkFileAvailability() {
         try {
@@ -619,56 +644,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error("DEBUG-HTML: Error fetching motion files:", motionError);
                 updateFileStatus(motionFileStatus, false);
             }
-            
-            // Check training files
-            try {
-                const trainingUrl = `/${urlDuckType}/check_training_files${variant ? `?variant=${variant}` : ''}`;
-                console.log("DEBUG-HTML: Checking training files at URL:", trainingUrl);
-                
-                const trainingResponse = await fetch(trainingUrl);
-                console.log("DEBUG-HTML: Training response status:", trainingResponse.status);
-                const trainingText = await trainingResponse.text();
-                console.log("DEBUG-HTML: Training response text:", trainingText);
-                
-                let trainingData;
-                try {
-                    trainingData = JSON.parse(trainingText);
-                    console.log("DEBUG-HTML: Training data:", trainingData);
-                    updateFileStatus(trainingFileStatus, trainingData.success);
-                } catch (parseError) {
-                    console.error("DEBUG-HTML: Error parsing training response:", parseError);
-                    console.error("DEBUG-HTML: Raw response:", trainingText);
-                    updateFileStatus(trainingFileStatus, false);
-                }
-            } catch (trainingError) {
-                console.error("DEBUG-HTML: Error fetching training files:", trainingError);
-                updateFileStatus(trainingFileStatus, false);
-            }
-            
-            // Check testing files
-            try {
-                const testingUrl = `/${urlDuckType}/check_testing_files${variant ? `?variant=${variant}` : ''}`;
-                console.log("DEBUG-HTML: Checking testing files at URL:", testingUrl);
-                
-                const testingResponse = await fetch(testingUrl);
-                console.log("DEBUG-HTML: Testing response status:", testingResponse.status);
-                const testingText = await testingResponse.text();
-                console.log("DEBUG-HTML: Testing response text:", testingText);
-                
-                let testingData;
-                try {
-                    testingData = JSON.parse(testingText);
-                    console.log("DEBUG-HTML: Testing data:", testingData);
-                    updateFileStatus(testingFileStatus, testingData.success);
-                } catch (parseError) {
-                    console.error("DEBUG-HTML: Error parsing testing response:", parseError);
-                    console.error("DEBUG-HTML: Raw response:", testingText);
-                    updateFileStatus(testingFileStatus, false);
-                }
-            } catch (testingError) {
-                console.error("DEBUG-HTML: Error fetching testing files:", testingError);
-                updateFileStatus(testingFileStatus, false);
-            }
 
             // Update button states
             updateButtonStates();
@@ -689,17 +664,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateButtonStates() {
         console.log("DEBUG-HTML: Updating button states");
-        const trainingButton = trainingForm?.querySelector('button');
-        const testingButton = testingForm?.querySelector('button');
+        const generateButton = document.querySelector('#motion-form button[type="submit"]');
+        const launchButton = document.getElementById('launch-playground');
         
-        if (trainingButton) {
-            trainingButton.disabled = !trainingFileStatus.classList.contains('available');
-            console.log("DEBUG-HTML: Training button disabled:", trainingButton.disabled);
+        if (generateButton) {
+            generateButton.disabled = !motionFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Generate button disabled:", generateButton.disabled);
         }
         
-        if (testingButton) {
-            testingButton.disabled = !testingFileStatus.classList.contains('available');
-            console.log("DEBUG-HTML: Testing button disabled:", testingButton.disabled);
+        if (launchButton) {
+            launchButton.disabled = !motionFileStatus.classList.contains('available');
+            console.log("DEBUG-HTML: Launch button disabled:", launchButton.disabled);
         }
     }
 
@@ -708,24 +683,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.bootstrap && window.bootstrap.Tooltip) {
         tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }
-    
-    // Handle training form if it exists
-    if (trainingForm) {
-        trainingForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log("DEBUG-HTML: Training form submitted - functionality to be implemented");
-            // Training functionality would be implemented here
-        });
-    }
-    
-    // Handle testing form if it exists
-    if (testingForm) {
-        testingForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log("DEBUG-HTML: Testing form submitted - functionality to be implemented");
-            // Testing functionality would be implemented here
         });
     }
     

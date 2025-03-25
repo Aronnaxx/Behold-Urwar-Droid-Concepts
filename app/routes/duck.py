@@ -8,6 +8,7 @@ from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
 from ..services.stl_to_glb import convert_stl_directory, get_stl_and_glb_files
 import logging
+import traceback
 import os
 from typing import Optional
 import zipfile
@@ -1080,38 +1081,55 @@ class DuckBlueprint(Blueprint):
                         'success': False,
                         'error': error_msg
                     }), 400
-                    
-                self.logger.debug(f"Mapped to internal duck name: {internal_name}")
-                
-                # Debug info
-                debug_info = {
-                    "url_path": request.path,
-                    "duck_type": duck_type,
-                    "variant": variant,
-                    "internal_name": internal_name,
-                    "request_args": dict(request.args)
-                }
                 
                 # Check for testing files
-                files = self.motion_service.list_testing_files(internal_name)
-                self.logger.debug(f"Found testing files: {files}")
+                success, message, files = self.motion_service.check_testing_files(internal_name)
                 
                 return jsonify({
-                    "success": True,
-                    "files": files,
-                    "debug_info": debug_info
+                    'success': success,
+                    'message': message,
+                    'files': files
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Error checking testing files: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'error': str(e)
+                }), 500
+
+        @self.route('/launch_gait_playground', methods=['POST'])
+        def launch_gait_playground():
+            """Launch the gait playground for a specific duck type."""
+            try:
+                # Get variant from query parameters
+                variant = request.args.get('variant')
+                
+                # Get the internal name using duck_config
+                internal_name = self.get_internal_duck_name(self.name, variant)
+                if not internal_name:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Invalid duck type or variant: {self.name}/{variant}'
+                    }), 400
+                
+                # Launch the playground
+                success, message, data = self.motion_service.gait_playground(
+                    duck_type=internal_name,
+                    variant=variant
+                )
+                
+                return jsonify({
+                    'success': success,
+                    'message': message,
+                    'data': data
                 })
             except Exception as e:
-                import traceback
-                self.logger.error(f"Error checking testing files: {str(e)}", exc_info=True)
+                self.logger.error(f"Error launching playground for {self.name}: {str(e)}")
                 return jsonify({
-                    "success": False,
-                    "error": str(e),
-                    "debug_info": {
-                        "exception": str(e),
-                        "traceback": traceback.format_exc()
-                    }
-                })
+                    'success': False,
+                    'message': f"Error launching playground: {str(e)}"
+                }), 500
 
         @self.route('/download_motion', methods=['POST'])
         def download_motion():
