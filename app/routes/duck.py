@@ -6,9 +6,12 @@ from ..services.open_duck_mini_playground import OpenDuckPlaygroundService
 from ..services.awd import AWDService
 from ..services.deployment import DeploymentService
 from ..services.reference_motion_generation import ReferenceMotionGenerationService
+from ..services.stl_to_glb import convert_stl_directory, get_stl_and_glb_files
 import logging
 import os
 from typing import Optional
+import zipfile
+import io
 
 class DuckBlueprint(Blueprint):
     """Blueprint for handling duck-related routes and views."""
@@ -111,11 +114,13 @@ class DuckBlueprint(Blueprint):
             # Get duck type config and validate
             duck_type_config = duck_config.get_duck_type(duck_type)
             if not duck_type_config:
+                self.logger.error(f"Invalid duck type: {duck_type}")
                 return redirect(url_for('main.index'))
             
             # Get variant info
             variants = duck_type_config.get('variants', {})
             if not variants:
+                self.logger.error(f"No variants found for duck type: {duck_type}")
                 return redirect(url_for('main.index'))
             
             if not variant_id:
@@ -123,6 +128,7 @@ class DuckBlueprint(Blueprint):
             
             variant = variants.get(variant_id)
             if not variant:
+                self.logger.error(f"Invalid variant: {variant_id} for duck type: {duck_type}")
                 return redirect(url_for('main.index'))
             
             # Create duck data object
@@ -137,13 +143,160 @@ class DuckBlueprint(Blueprint):
                 }
             }
             
-            # Get STL parts data from config
-            stl_parts = duck_type_config.get('stl_parts', [])
+            # Get STL and GLB files
+            files = get_stl_and_glb_files(duck_type, variant_id)
+            
+            if not files['stl_files']:
+                self.logger.warning(f"No STL files found for {duck_type}")
+                # You might want to show a message to the user here
             
             return render_template('duck_droids/stl_models.html',
                                 duck=duck_data,
-                                stl_parts=stl_parts,
+                                stl_files=files['stl_files'],
+                                glb_files=files['glb_files'],
                                 variants=variants)
+
+        @self.route('/convert_stl_to_glb', methods=['POST'])
+        def convert_stl_to_glb():
+            """Convert STL files to GLB format."""
+            try:
+                duck_type = self.name
+                variant_id = request.args.get('variant')
+                
+                # Get duck type config
+                duck_type_config = duck_config.get_duck_type(duck_type)
+                if not duck_type_config:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Invalid duck type: {duck_type}'
+                    }), 400
+                
+                # Get STL directory from config or use default
+                stl_dir = Path(duck_type_config.get('stl_directory', 'open_duck_mini/print'))
+                if not stl_dir.is_absolute():
+                    stl_dir = self.workspace_root / stl_dir
+                
+                # Construct GLB directory path
+                glb_dir = self.workspace_root / "static" / "models" / duck_type
+                if variant_id:
+                    glb_dir = glb_dir / variant_id
+                
+                # Convert files
+                results = convert_stl_directory(str(stl_dir), str(glb_dir))
+                
+                # Check if any conversions failed
+                failed_files = [name for name, (success, _) in results.items() if not success]
+                
+                if failed_files:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Failed to convert some files: {", ".join(failed_files)}',
+                        'results': results
+                    }), 400
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Successfully converted all STL files to GLB',
+                    'results': results
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Error converting STL files: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error converting STL files: {str(e)}'
+                }), 500
+
+        @self.route('/download_stl_bundle')
+        def download_stl_bundle():
+            """Download all STL files as a zip bundle."""
+            try:
+                duck_type = self.name
+                variant_id = request.args.get('variant')
+                
+                # Get duck type config
+                duck_type_config = duck_config.get_duck_type(duck_type)
+                if not duck_type_config:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Invalid duck type: {duck_type}'
+                    }), 400
+                
+                # Get STL files
+                files = get_stl_and_glb_files(duck_type, variant_id)
+                stl_files = files['stl_files']
+                
+                if not stl_files:
+                    return jsonify({
+                        'success': False,
+                        'message': 'No STL files found'
+                    }), 404
+                
+                # Create zip file in memory
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    for stl_file in stl_files:
+                        file_path = Path(stl_file['path'])
+                        if file_path.exists():
+                            zip_file.write(file_path, file_path.name)
+                
+                zip_buffer.seek(0)
+                
+                # Return zip file
+                return send_file(
+                    zip_buffer,
+                    mimetype='application/zip',
+                    as_attachment=True,
+                    download_name=f'{duck_type}_stl_files.zip'
+                )
+                
+            except Exception as e:
+                self.logger.error(f"Error creating STL bundle: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error creating STL bundle: {str(e)}'
+                }), 500
+
+        @self.route('/download_stl/<filename>')
+        def download_stl(filename):
+            """Download a single STL file."""
+            try:
+                duck_type = self.name
+                variant_id = request.args.get('variant')
+                
+                # Get STL files
+                files = get_stl_and_glb_files(duck_type, variant_id)
+                stl_files = files['stl_files']
+                
+                # Find the requested file
+                stl_file = next((f for f in stl_files if f['name'] == filename), None)
+                
+                if not stl_file:
+                    return jsonify({
+                        'success': False,
+                        'message': f'STL file not found: {filename}'
+                    }), 404
+                
+                file_path = Path(stl_file['path'])
+                if not file_path.exists():
+                    return jsonify({
+                        'success': False,
+                        'message': f'STL file not found: {filename}'
+                    }), 404
+                
+                return send_file(
+                    file_path,
+                    mimetype='application/sla',
+                    as_attachment=True,
+                    download_name=filename
+                )
+                
+            except Exception as e:
+                self.logger.error(f"Error downloading STL file: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error downloading STL file: {str(e)}'
+                }), 500
 
         @self.route('/bom')
         def bom():
