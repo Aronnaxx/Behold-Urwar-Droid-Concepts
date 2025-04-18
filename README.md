@@ -57,7 +57,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Behold-Urwar-Droid-Concepts.git
+
+git clone https://github.com/Aronnaxx/Behold-Urwar-Droid-Concepts.git
 cd Behold-Urwar-Droid-Concepts
 
 # Initialize and update submodules
