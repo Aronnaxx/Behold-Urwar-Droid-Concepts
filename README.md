@@ -68,6 +68,7 @@ git submodule update --init --recursive
 
 1. Start the web interface:
 ```bash
+uv python pin 3.11
 uv run app.py
 ```
 
