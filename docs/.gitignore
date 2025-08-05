@@ -1,0 +1,14 @@
+# GitHub Pages static site - auto-generated
+# Only keep the README.md and let the CI/CD generate the rest
+
+# Generated HTML files
+*.html
+
+# Generated directories
+static/
+open_duck_mini/
+bdx/
+learning/
+
+# But keep the README
+!README.md

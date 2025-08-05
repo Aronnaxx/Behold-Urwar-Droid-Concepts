@@ -411,4 +411,118 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-theme="dark"] .log-message {
     color: var(--dark-text);
-} 
+}
+
+/* Additional styles for static site */
+.model-viewer {
+    width: 100%;
+    height: 300px;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.model-viewer model-viewer {
+    width: 100%;
+    height: 100%;
+    --poster-color: transparent;
+    --progress-bar-color: #007bff;
+    --progress-bar-height: 2px;
+}
+
+.duck-card {
+    transition: transform 0.2s;
+}
+
+.duck-card:hover {
+    transform: translateY(-5px);
+}
+
+.variant-list {
+    margin-top: 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.variant-list li {
+    margin-bottom: 0.5rem;
+}
+
+.variant-list li:last-child {
+    margin-bottom: 0;
+}
+
+.variant-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--bs-primary);
+    color: white;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    margin-right: 0.5rem;
+}
+
+.duck-specs {
+    background-color: var(--dark-card-bg);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.duck-specs h3 {
+    color: var(--dark-primary);
+    margin-bottom: 1rem;
+}
+
+.duck-specs .spec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--dark-border);
+}
+
+.duck-specs .spec-item:last-child {
+    border-bottom: none;
+}
+
+.duck-specs .spec-label {
+    color: var(--dark-text);
+}
+
+.duck-specs .spec-value {
+    color: var(--dark-primary);
+    font-weight: bold;
+}
+
+.action-card {
+    background-color: var(--dark-card-bg);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s;
+}
+
+.action-card:hover {
+    transform: translateY(-5px);
+}
+
+.action-card h3 {
+    color: var(--dark-primary);
+    margin-bottom: 1rem;
+}
+
+.action-card p {
+    color: var(--dark-text);
+    margin-bottom: 1rem;
+}
+
+[data-theme="dark"] .model-viewer {
+    background-color: var(--dark-bg);
+}
+
+[data-theme="dark"] .variant-badge {
+    background-color: var(--dark-primary);
+}
